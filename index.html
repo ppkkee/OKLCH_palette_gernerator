@@ -691,6 +691,20 @@ input[type="range"]::-webkit-slider-thumb {
   letter-spacing: 0.04em;
 }
 
+.yellow-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #c8a020;
+  cursor: help;
+  opacity: 0.8;
+  vertical-align: middle;
+  margin-left: 3px;
+  position: relative;
+}
+.yellow-info-icon:hover { opacity: 1; }
+
 /* 500 cell warning badge */
 .pcell-warn {
   position: absolute;
@@ -927,29 +941,26 @@ const C_CURVE = {
 // ---- BASE COLOR DEFINITIONS (500 anchor, cool-muted tone) ----
 // All defined as { h: hue, c: base chroma at 500 }
 const COLORS = {
-  'neutral-gray': { h: 242,  c: 0.005 },
-  'cool-gray':    { h: 232,  c: 0.016 },
-  'slate':        { h: 225,  c: 0.028 },
-  'blue':         { h: 256,  c: 0.125 },
-  'sky':          { h: 214,  c: 0.105 },
-  'purple':       { h: 278,  c: 0.105 },
-  'pink':         { h: 340,  c: 0.100 },
-  'red':          { h: 13,   c: 0.130 },
-  'orange':       { h: 45,   c: 0.118 },
-  'yellow':       { h: 88,   c: 0.098 },   // yellow: special handling
-  'lime':         { h: 132,  c: 0.108 },
-  'green':        { h: 158,  c: 0.105 },
+  'neutral-gray': { h: 267,  c: 0.005 },
+  'cool-gray':    { h: 254,  c: 0.016 },
+  'slate':        { h: 244,  c: 0.028 },
+  'blue':         { h: 259,  c: 0.125 },
+  'sky':          { h: 216,  c: 0.105 },
+  'purple':       { h: 288,  c: 0.105 },
+  'pink':         { h: 1,    c: 0.100 },
+  'red':          { h: 19,   c: 0.130 },
+  'orange':       { h: 62,   c: 0.118 },
+  'yellow':       { h: 98,   c: 0.165 },   // yellow: special handling — higher chroma to avoid muddy look
+  'lime':         { h: 131,  c: 0.108 },
+  'green':        { h: 159,  c: 0.105 },
 };
 
 // Yellow special: visual correction (dark yellow problem)
 // Yellow 700+ gets hue shifted toward amber + L correction
 const YELLOW_CORRECTION = {
-  700: { hShift: -15, lAdj: +0.03 },
-  800: { hShift: -25, lAdj: +0.05 },
-  900: { hShift: -30, lAdj: +0.06 },
-  // Light end: reduce chroma to avoid looking too saturated
-  50:  { cMult: 0.6 },
-  100: { cMult: 0.7 },
+  700: { hShift: -8,  lAdj: +0.03 },
+  800: { hShift: -12, lAdj: +0.05 },
+  900: { hShift: -15, lAdj: +0.06 },
 };
 
 // Global user params
@@ -1058,7 +1069,12 @@ function buildScale(name, base, theme) {
     l = l500 + (l - l500) * params.lSpread;
     l = Math.max(0.05, Math.min(0.99, l));
 
-    // Yellow light-end correction
+    // Yellow & Lime: global L boost (+0.05) — human eye perceives these hues as brighter
+    if (isYellow || name === 'lime') {
+      l = Math.min(0.99, l + 0.05);
+    }
+
+    // Yellow per-step fine correction (dark end hue shift + additional L adj)
     if (isYellow && YELLOW_CORRECTION[step]?.lAdj) {
       l = Math.min(0.99, l + YELLOW_CORRECTION[step].lAdj);
     }
@@ -1227,7 +1243,11 @@ function renderPalette() {
   Object.entries(palette).forEach(([name, scale]) => {
     const label = document.createElement('div');
     label.className = 'prow-label';
-    label.textContent = name;
+    if (name === 'yellow') {
+      label.innerHTML = `${name} <span class="yellow-info-icon" title="노란색은 인간의 시각 특성상 같은 OKLCH L값에서도 더 밝게 인지됩니다. 팔레트 일관성을 위해 L값을 +0.05 높게 보정합니다.">ⓘ</span>`;
+    } else {
+      label.textContent = name;
+    }
     grid.appendChild(label);
 
     STEPS.forEach(step => {
@@ -1319,10 +1339,11 @@ function renderProof() {
 // RENDER — DEMO
 // ====================================================================
 
-const TAG_COLORS = ['blue','sky','purple','pink','red','orange','lime','green'];
+const TAG_COLORS = ['blue','sky','purple','pink','red','orange','yellow','lime','green'];
 const ALERT_CFG = [
   { color: 'red',    icon: '✕', title: 'Critical: Node Unreachable',  desc: 'srv-prod-07 failed health check ×3' },
   { color: 'orange', icon: '▲', title: 'Warning: Memory Pressure',    desc: 'Free mem < 512MB on cluster-02' },
+  { color: 'yellow', icon: '⚡', title: 'Caution: High Latency',       desc: 'p99 latency > 800ms on api-gateway' },
   { color: 'blue',   icon: 'ℹ', title: 'Info: Deployment Running',    desc: 'Rolling update v2.4.1 in progress' },
   { color: 'green',  icon: '✓', title: 'Resolved: Disk Alert Cleared', desc: 'Disk usage back to 61% after cleanup' },
 ];
@@ -1330,6 +1351,7 @@ const STATUS_CFG = [
   { color: 'green',        label: 'Running',     count: 12 },
   { color: 'red',          label: 'Critical',    count: 1  },
   { color: 'orange',       label: 'Warning',     count: 3  },
+  { color: 'yellow',       label: 'Caution',     count: 2  },
   { color: 'blue',         label: 'Deploying',   count: 2  },
   { color: 'cool-gray',    label: 'Idle',        count: 5  },
   { color: 'purple',       label: 'Maintenance', count: 1  },
