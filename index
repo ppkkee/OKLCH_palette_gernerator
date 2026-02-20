@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKLCH Palette Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Pretendard:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===== THEME VARS ===== */
+body[data-theme="light"] {
+  --bg:       #f2f3f5;
+  --surface:  #ffffff;
+  --surface2: #f7f8fa;
+  --border:   #e2e4e9;
+  --text:     #1a1d24;
+  --text2:    #4b5263;
+  --text3:    #9099a8;
+  --text4:    #c2c8d2;
+  --shadow:   0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05);
+}
+body[data-theme="dark"] {
+  --bg:       #0e1015;
+  --surface:  #14171e;
+  --surface2: #1b1f28;
+  --border:   #252932;
+  --text:     #dde1ea;
+  --text2:    #8d95a3;
+  --text3:    #4e5564;
+  --text4:    #2c3040;
+  --shadow:   0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', 'IBM Plex Sans KR', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  min-height: 100vh;
+  transition: background 0.25s, color 0.25s;
+}
+
+/* ===== HEADER ===== */
+.header {
+  padding: 14px 36px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.header-bottom {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+.logo span { color: var(--text3); font-weight: 400; }
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+/* Mode toggle */
+.mode-toggle {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.mode-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.mode-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* Sliders */
+.ctrl-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ctrl-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #5b8fd4;
+  cursor: pointer;
+}
+.ctrl-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+  min-width: 28px;
+}
+
+/* ===== MAIN ===== */
+.main {
+  padding: 28px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  max-width: 1600px;
+}
+
+/* ===== SECTION ===== */
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ===== PALETTE TABLE ===== */
+.palette-table {
+  display: grid;
+  grid-template-columns: 120px repeat(10, 1fr);
+  gap: 2px;
+}
+
+.ph-empty { }
+.ph-step {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text4);
+  text-align: center;
+  padding-bottom: 6px;
+}
+
+.prow {
+  display: contents;
+}
+
+.prow-label {
+  display: flex;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text3);
+  padding-right: 10px;
+}
+
+.pcell {
+  height: 42px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  border-radius: 2px;
+}
+.pcell:hover {
+  transform: scaleY(1.25) scaleX(1.04);
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+/* 500 marker */
+.pcell.is500::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  mix-blend-mode: overlay;
+}
+.pcell.is500:hover::before {
+  content: '더블클릭으로 Hue 편집';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  z-index: 10;
+}
+
+/* ===== UNIFORM L PROOF ===== */
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.proof-cell {
+  height: 28px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ===== TOOLTIP ===== */
+.tip {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 999;
+  display: none;
+  min-width: 200px;
+  box-shadow: var(--shadow);
+}
+.tip-swatch {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  margin-bottom: 9px;
+  border: 1px solid var(--border);
+}
+.tip-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  line-height: 1.8;
+  color: var(--text3);
+}
+.tip-row b { color: var(--text2); font-weight: 400; }
+.tip-wcag {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--text3);
+}
+
+/* ===== SEMANTIC TOKEN DEMO ===== */
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.demo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+.demo-card-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+/* Tags */
+.tag-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+  white-space: nowrap;
+  cursor: default;
+  transition: filter 0.15s;
+}
+.tag:hover { filter: brightness(0.95); }
+.tag-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+}
+
+/* Alerts */
+.alert-list { display: flex; flex-direction: column; gap: 8px; }
+.alert {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 13px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 12px;
+}
+.alert-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+.alert-title { font-weight: 600; font-size: 12px; margin-bottom: 1px; }
+.alert-desc { font-size: 12px; opacity: 0.75; }
+
+/* Status badges */
+.badge-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.badge-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+
+/* Token table */
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+.token-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: var(--text4);
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+.token-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: middle;
+}
+.token-table tr:last-child td { border-bottom: none; }
+.swatch-cell {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.swatch-mini {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cr-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.cr-pass { background: rgba(60,180,100,0.15); color: #3cb464; }
+.cr-warn { background: rgba(200,160,60,0.15); color: #c8a03c; }
+.cr-fail { background: rgba(180,60,60,0.15); color: #b43c3c; }
+
+/* Uniform L proof bar */
+.proof-bar {
+  display: flex;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+.proof-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.proof-step-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text4);
+  text-align: center;
+  padding-bottom: 4px;
+}
+.proof-square {
+  height: 20px;
+  border-radius: 2px;
+  cursor: default;
+}
+
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.dl-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: #5b8fd4;
+  box-shadow: 0 0 0 1px #5b8fd440;
+}
+.dl-btn svg {
+  flex-shrink: 0;
+}
+/* ===== TOKEN CUSTOMIZER ===== */
+.customizer-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+.customizer-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.customizer-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  min-width: 44px;
+}
+.step-select {
+  display: flex;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 3px;
+}
+.step-btn {
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.step-btn:hover { color: var(--text2); background: var(--surface2); }
+.step-btn.active { background: var(--border); color: var(--text); font-weight: 600; }
+.reset-btn {
+  padding: 5px 11px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text3);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.reset-btn:hover { color: var(--text); border-color: var(--text2); }
+.cr-tag { display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600; }
+.cr-tag.pass { background:rgba(60,180,100,0.12);color:#3ca864; }
+.cr-tag.warn { background:rgba(200,160,60,0.15);color:#b89040; }
+.cr-tag.fail { background:rgba(180,60,60,0.15);color:#c05050; }
+
+/* ===== HUE PICKER MODAL ===== */
+.hue-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.hue-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  width: 320px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  position: relative;
+}
+.hue-modal-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.hue-modal-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text3);
+  margin-bottom: 18px;
+}
+.hue-preview-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  align-items: center;
+}
+.hue-preview-swatch {
+  width: 48px; height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+.hue-preview-info {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+.hue-track-wrap {
+  position: relative;
+  margin-bottom: 20px;
+}
+.hue-track {
+  width: calc(100% - 22px); /* inset by thumb radius (11px) each side */
+  margin: 0 11px;
+  height: 5px;
+  border-radius: 3px;
+  border: none;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  display: block;
+}
+.hue-track::-webkit-slider-thumb {
+  appearance: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  cursor: grab;
+  margin-top: -8px;
+}
+.hue-track::-moz-range-thumb {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  cursor: grab;
+}
+.hue-val-label {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--text4);
+  margin-top: 8px;
+  padding: 0; /* full width — matches track start/end via margin on track */
+}
+.hue-similarity-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(200,140,40,0.12);
+  border: 1px solid rgba(200,140,40,0.2);
+  margin-bottom: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: #c89028;
+  line-height: 1.55;
+}
+.hue-similarity-warn b { font-weight: 600; display: block; margin-bottom: 2px; }
+.hue-warn-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+.hue-modal-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.hue-btn {
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.hue-btn.secondary { background: transparent; color: var(--text3); }
+.hue-btn.secondary:hover { color: var(--text); border-color: var(--text2); }
+.hue-btn.primary { background: #4a7fd4; color: white; border-color: #4a7fd4; }
+.hue-btn.primary:hover { background: #3a6fc4; }
+.hue-btn.primary:disabled { background: var(--surface2); color: var(--text4); border-color: var(--border); cursor: not-allowed; }
+
+.pcell { position: relative; }
+.copy-flash {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.72);
+  color: #fff;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  white-space: nowrap;
+  z-index: 30;
+  letter-spacing: 0.04em;
+}
+
+/* 500 cell warning badge */
+.pcell-warn {
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: rgba(220,160,20,0.9);
+  color: #1a1200;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 5;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  cursor: default;
+}
+.pcell-warn-tip {
+  display: none;
+  position: absolute;
+  top: 20px;
+  right: 0;
+  width: 200px;
+  background: var(--surface);
+  border: 1px solid rgba(200,140,40,0.35);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: #c89028;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  z-index: 200;
+  pointer-events: none;
+}
+.pcell-warn-tip::before {
+  content: '⚠  ';
+  font-size: 12px;
+}
+
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">OKLCH Palette Generator <span>v2.0</span></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <div class="mode-toggle">
+        <button class="mode-btn" onclick="setTheme('light')">☀ Light</button>
+        <button class="mode-btn active" onclick="setTheme('dark')">☾ Dark</button>
+      </div>
+      <button class="dl-btn" onclick="downloadFigmaJSON()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M6.5 1v7M3.5 5.5l3 3 3-3M2 10.5h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Figma JSON
+      </button>
+      <button class="dl-btn" onclick="resetSettings()" style="color:var(--text3);">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M2 6.5A4.5 4.5 0 106.5 2H4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M2 2v4.5h4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        초기화
+      </button>
+      <button class="dl-btn" id="saveBtn" onclick="saveSettings()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M2 2h7.5L11 3.5V11a1 1 0 01-1 1H3a1 1 0 01-1-1V2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+          <rect x="4" y="7" width="5" height="4" rx="0.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M4 2v3h4V2" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        </svg>
+        저장
+      </button>
+    </div>
+  </div>
+  <div class="header-bottom">
+    <div class="ctrl-wrap">
+    <div class="ctrl">
+      <span class="ctrl-label">Chroma</span>
+      <input type="range" id="sChroma" min="0.4" max="1.6" step="0.05" value="1.4">
+      <span class="ctrl-val" id="vChroma">1.40</span>
+    </div>
+    <div class="ctrl">
+      <span class="ctrl-label">Hue Shift</span>
+      <input type="range" id="sHue" min="-30" max="30" step="1" value="0">
+      <span class="ctrl-val" id="vHue">0°</span>
+    </div>
+    <div class="ctrl">
+      <span class="ctrl-label">L Spread</span>
+      <input type="range" id="sSpread" min="0.7" max="1.3" step="0.05" value="1.0">
+      <span class="ctrl-val" id="vSpread">1.00</span>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PALETTE -->
+  <div>
+    <div class="section-head">
+      <div class="section-title">Base Palette · OKLCH Uniform Lightness</div>
+      <div class="section-line"></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text3);white-space:nowrap;">
+        ● = 500 anchor
+      </div>
+    </div>
+    <div id="paletteContainer"></div>
+  </div>
+
+  <!-- UNIFORM L PROOF -->
+  <div>
+    <div class="section-head">
+      <div class="section-title">Uniform Lightness Proof · 동일 스텝 = 동일 OKLCH L</div>
+      <div class="section-line"></div>
+    </div>
+    <div id="proofContainer" class="proof-bar"></div>
+  </div>
+
+  <!-- DEMO -->
+  <div>
+    <div class="section-head">
+      <div class="section-title">Component Demo · Tag / Alert / Status Badge</div>
+      <div class="section-line"></div>
+    </div>
+
+    <!-- Token customizer -->
+    <div class="customizer-bar" id="customizerBar">
+      <div class="customizer-group">
+        <span class="customizer-label">BG</span>
+        <div class="step-select" id="bgSteps"></div>
+      </div>
+      <div class="customizer-group">
+        <span class="customizer-label">Text</span>
+        <div class="step-select" id="textSteps"></div>
+      </div>
+      <div class="customizer-group">
+        <span class="customizer-label">Border</span>
+        <div class="step-select" id="borderSteps"></div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <span id="contrastBadge" style="font-family:'IBM Plex Mono',monospace;font-size:12px;"></span>
+        <button class="reset-btn" onclick="resetTokenSteps()">↺ Reset</button>
+      </div>
+    </div>
+
+    <div class="demo-grid" id="demoContainer"></div>
+  </div>
+
+  <!-- TOKEN TABLE -->
+  <div>
+    <div class="section-head">
+      <div class="section-title">Semantic Token Map · fill · text · border per color</div>
+      <div class="section-line"></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto;box-shadow:var(--shadow);">
+      <table class="token-table" id="tokenTable"></table>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOOLTIP -->
+<div class="tip" id="tip">
+  <div class="tip-swatch" id="tipSwatch"></div>
+  <div class="tip-name" id="tipName"></div>
+  <div class="tip-row"><span>HEX</span><b id="tipHex"></b></div>
+  <div class="tip-row"><span>OKLCH</span><b id="tipOklch"></b></div>
+  <div class="tip-row"><span>HSL</span><b id="tipHsl"></b></div>
+  <div class="tip-row"><span>OKLCH L</span><b id="tipL"></b></div>
+  <div class="tip-wcag" id="tipWcag"></div>
+</div>
+
+<script>
+// ====================================================================
+// OKLCH COLOR ENGINE
+// ====================================================================
+
+const STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
+
+// ---- UNIFORM LIGHTNESS TABLE ----
+// Core rule: every color at step N has the SAME OKLCH L value.
+// Light mode: 50=very light, 900=very dark
+// Dark mode: inverted + boosted contrast (APCA consideration)
+// These are the canonical L values. All colors MUST use exactly these.
+const L_TABLE = {
+  light: {
+    50:  0.975,
+    100: 0.950,
+    200: 0.900,
+    300: 0.820,
+    400: 0.700,
+    500: 0.570,
+    600: 0.460,
+    700: 0.370,
+    800: 0.275,
+    900: 0.185,
+  },
+  dark: {
+    // Dark mode: 50=darkest tinted, 900=very light
+    // 50~400: darker surfaces, 500: mid, 600~900: progressively lighter
+    // Extra contrast push per APCA guidance (dark bg needs stronger contrast)
+    50:  0.185,
+    100: 0.220,
+    200: 0.275,
+    300: 0.360,
+    400: 0.470,
+    500: 0.570,
+    600: 0.680,
+    700: 0.790,
+    800: 0.890,
+    900: 0.960,
+  }
+};
+
+// ---- CHROMA TABLE ----
+// Chroma per step — peaks at 400-500, tapers at extremes
+// Same relative shape for all colors, scaled by base chroma
+const C_CURVE = {
+  50:  0.06,
+  100: 0.10,
+  200: 0.18,
+  300: 0.42,
+  400: 0.78,
+  500: 1.00,
+  600: 0.88,
+  700: 0.72,
+  800: 0.52,
+  900: 0.30,
+};
+
+// ---- BASE COLOR DEFINITIONS (500 anchor, cool-muted tone) ----
+// All defined as { h: hue, c: base chroma at 500 }
+const COLORS = {
+  'neutral-gray': { h: 242,  c: 0.005 },
+  'cool-gray':    { h: 232,  c: 0.016 },
+  'slate':        { h: 225,  c: 0.028 },
+  'blue':         { h: 256,  c: 0.125 },
+  'sky':          { h: 214,  c: 0.105 },
+  'purple':       { h: 278,  c: 0.105 },
+  'pink':         { h: 340,  c: 0.100 },
+  'red':          { h: 13,   c: 0.130 },
+  'orange':       { h: 45,   c: 0.118 },
+  'yellow':       { h: 88,   c: 0.098 },   // yellow: special handling
+  'lime':         { h: 132,  c: 0.108 },
+  'green':        { h: 158,  c: 0.105 },
+};
+
+// Yellow special: visual correction (dark yellow problem)
+// Yellow 700+ gets hue shifted toward amber + L correction
+const YELLOW_CORRECTION = {
+  700: { hShift: -15, lAdj: +0.03 },
+  800: { hShift: -25, lAdj: +0.05 },
+  900: { hShift: -30, lAdj: +0.06 },
+  // Light end: reduce chroma to avoid looking too saturated
+  50:  { cMult: 0.6 },
+  100: { cMult: 0.7 },
+};
+
+// Global user params
+let params = {
+  chromaScale: 1.4,
+  hueShift: 0,
+  lSpread: 1.0,
+};
+let currentTheme = 'dark';
+
+// User-overridden hues per color (null = use default from COLORS)
+let customHues = {};
+// e.g. customHues['blue'] = 200 (override hue to 200)
+
+// ====================================================================
+// MATH
+// ====================================================================
+
+function oklchToHex(l, c, h) {
+  const hr = h * Math.PI / 180;
+  const a_ = c * Math.cos(hr), b_ = c * Math.sin(hr);
+  // Oklab → LMS
+  const l_ = l + 0.3963377774*a_ + 0.2158037573*b_;
+  const m_ = l - 0.1055613458*a_ - 0.0638541728*b_;
+  const s_ = l - 0.0894841775*a_ - 1.2914855480*b_;
+  const lc = l_*l_*l_, mc = m_*m_*m_, sc = s_*s_*s_;
+  // LMS → Linear sRGB
+  let R =  4.0767416621*lc - 3.3077115913*mc + 0.2309699292*sc;
+  let G = -1.2684380046*lc + 2.6097574011*mc - 0.3413193965*sc;
+  let B = -0.0041960863*lc - 0.7034186147*mc + 1.7076147010*sc;
+  // Gamut clamp (preserve L by clamping C)
+  if (R < 0 || R > 1 || G < 0 || G > 1 || B < 0 || B > 1) {
+    // Binary search on chroma to bring into gamut
+    let lo = 0, hi = c, cc = c * 0.5;
+    for (let i = 0; i < 14; i++) {
+      const a2 = cc * Math.cos(hr), b2 = cc * Math.sin(hr);
+      const l2 = l + 0.3963377774*a2 + 0.2158037573*b2;
+      const m2 = l - 0.1055613458*a2 - 0.0638541728*b2;
+      const s2 = l - 0.0894841775*a2 - 1.2914855480*b2;
+      const lc2 = l2*l2*l2, mc2 = m2*m2*m2, sc2 = s2*s2*s2;
+      R =  4.0767416621*lc2 - 3.3077115913*mc2 + 0.2309699292*sc2;
+      G = -1.2684380046*lc2 + 2.6097574011*mc2 - 0.3413193965*sc2;
+      B = -0.0041960863*lc2 - 0.7034186147*mc2 + 1.7076147010*sc2;
+      if (R >= 0 && R <= 1 && G >= 0 && G <= 1 && B >= 0 && B <= 1) lo = cc;
+      else hi = cc;
+      cc = (lo + hi) * 0.5;
+    }
+  }
+  const toS = v => v <= 0.0031308 ? 12.92*v : 1.055*Math.pow(Math.max(0,v), 1/2.4) - 0.055;
+  const r = Math.round(Math.min(255, Math.max(0, toS(R)*255)));
+  const g = Math.round(Math.min(255, Math.max(0, toS(G)*255)));
+  const b = Math.round(Math.min(255, Math.max(0, toS(B)*255)));
+  return { hex: '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''), r, g, b };
+}
+
+function hexToHSL(hex) {
+  let r = parseInt(hex.slice(1,3),16)/255;
+  let g = parseInt(hex.slice(3,5),16)/255;
+  let b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if (max===min) { h=s=0; } else {
+    const d = max-min;
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max) {
+      case r: h=((g-b)/d+(g<b?6:0))/6; break;
+      case g: h=((b-r)/d+2)/6; break;
+      case b: h=((r-g)/d+4)/6; break;
+    }
+  }
+  return `${Math.round(h*360)}, ${Math.round(s*100)}%, ${Math.round(l*100)}%`;
+}
+
+function relativeLuminance(hex) {
+  const r = parseInt(hex.slice(1,3),16)/255;
+  const g = parseInt(hex.slice(3,5),16)/255;
+  const b = parseInt(hex.slice(5,7),16)/255;
+  const c = v => v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4);
+  return 0.2126*c(r) + 0.7152*c(g) + 0.0722*c(b);
+}
+
+function contrastRatio(hex1, hex2) {
+  const l1 = relativeLuminance(hex1), l2 = relativeLuminance(hex2);
+  const L = Math.max(l1,l2), D = Math.min(l1,l2);
+  return (L+0.05)/(D+0.05);
+}
+
+// ====================================================================
+// PALETTE GENERATION
+// ====================================================================
+
+let palette = {};
+
+function buildScale(name, base, theme) {
+  const Ltable = L_TABLE[theme];
+  const isYellow = name === 'yellow';
+  const scale = {};
+  // Use custom hue if user overrode it
+  const baseH = (customHues[name] !== undefined) ? customHues[name] : base.h;
+
+  STEPS.forEach(step => {
+    // --- LIGHTNESS ---
+    let l = Ltable[step];
+    // Apply lSpread: amplify the distance from 500's L
+    const l500 = Ltable[500];
+    l = l500 + (l - l500) * params.lSpread;
+    l = Math.max(0.05, Math.min(0.99, l));
+
+    // Yellow light-end correction
+    if (isYellow && YELLOW_CORRECTION[step]?.lAdj) {
+      l = Math.min(0.99, l + YELLOW_CORRECTION[step].lAdj);
+    }
+
+    // --- HUE ---
+    let h = baseH + params.hueShift;
+    if (isYellow && YELLOW_CORRECTION[step]?.hShift) {
+      h += YELLOW_CORRECTION[step].hShift;
+    }
+
+    // --- CHROMA ---
+    let c = base.c * C_CURVE[step] * params.chromaScale;
+    if (isYellow && YELLOW_CORRECTION[step]?.cMult) {
+      c *= YELLOW_CORRECTION[step].cMult;
+    }
+    c = Math.max(0, c);
+
+    const { hex, r, g, b } = oklchToHex(l, c, h);
+    const hsl = hexToHSL(hex);
+    scale[step] = {
+      l: +l.toFixed(4),
+      c: +c.toFixed(4),
+      h: +h.toFixed(1),
+      hex,
+      oklch: `oklch(${(l*100).toFixed(1)}% ${c.toFixed(4)} ${h.toFixed(1)})`,
+      hsl: `hsl(${hsl})`,
+    };
+  });
+  return scale;
+}
+
+function buildPalette() {
+  palette = {};
+  Object.entries(COLORS).forEach(([name, base]) => {
+    palette[name] = buildScale(name, base, currentTheme);
+  });
+}
+
+// ====================================================================
+// TOKEN STEP CONFIG (user-adjustable)
+// ====================================================================
+
+const DEFAULT_STEPS = {
+  subtle: { bg: 100, text: 700, border: 200 },
+  solid:  { bg: 500, text: null, border: null }, // text/border auto
+  outline:{ bg: null, text: null, border: null }, // all auto
+  alert:  { bg: 100, text: 700, border: 200 },
+  status: { bg: 100, text: 600, border: 200 },
+};
+
+// Current user selection (shared across all colors for simplicity)
+let tokenSteps = {
+  bg:     100,
+  text:   700,
+  border: 200,
+};
+
+function resetTokenSteps() {
+  tokenSteps = { bg: 100, text: 700, border: 200 };
+  renderCustomizer();
+  renderDemo();
+  renderTokenTable();
+}
+
+function setTokenStep(role, step) {
+  tokenSteps[role] = step;
+  renderCustomizer();
+  renderDemo();
+  renderTokenTable();
+}
+
+function renderCustomizer() {
+  ['bg','text','border'].forEach(role => {
+    const container = document.getElementById(role + 'Steps');
+    container.innerHTML = '';
+    STEPS.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'step-btn' + (tokenSteps[role] === s ? ' active' : '');
+      btn.textContent = s;
+      btn.onclick = () => setTokenStep(role, s);
+      container.appendChild(btn);
+    });
+  });
+
+  // Update contrast badge using blue as reference color
+  const s = palette['blue'];
+  if (s && s[tokenSteps.bg] && s[tokenSteps.text]) {
+    const cr = contrastRatio(s[tokenSteps.text].hex, s[tokenSteps.bg].hex);
+    const cls = cr >= 4.5 ? 'pass' : cr >= 3.0 ? 'warn' : 'fail';
+    const label = cr >= 4.5 ? 'AA ✓' : cr >= 3.0 ? 'AA Large' : '✕ Fail';
+    document.getElementById('contrastBadge').innerHTML =
+      `<span class="cr-tag ${cls}">text/bg ${cr.toFixed(1)}:1 ${label}</span>`;
+  }
+}
+
+
+
+// Tag subtle: uses tokenSteps (user-adjustable)
+function getTagTokens(colorName, variant) {
+  const s = palette[colorName];
+  if (!s) return null;
+  const isDark = currentTheme === 'dark';
+
+  if (variant === 'subtle') {
+    const bg   = s[tokenSteps.bg]     || s[100];
+    const text = s[tokenSteps.text]   || s[700];
+    const bord = s[tokenSteps.border] || s[200];
+    return { bg: bg.hex, text: text.hex, border: bord.hex, dot: s[500].hex };
+  }
+  if (variant === 'solid') {
+    return { bg: s[500].hex, text: isDark ? s[900].hex : s[50].hex, border: isDark ? s[400].hex : s[600].hex, dot: isDark ? s[900].hex : s[50].hex };
+  }
+  if (variant === 'outline') {
+    const tc = isDark ? s[400].hex : s[600].hex;
+    return { bg: 'transparent', text: tc, border: tc, dot: tc };
+  }
+}
+
+function getAlertTokens(colorName) {
+  const s = palette[colorName];
+  if (!s) return null;
+  const isDark = currentTheme === 'dark';
+  const bg   = (s[tokenSteps.bg]     || s[100]).hex;
+  const text = (s[tokenSteps.text]   || s[700]).hex;
+  const bord = (s[tokenSteps.border] || s[200]).hex;
+  return { bg, border: bord, text, icon: isDark ? s[500].hex : s[600].hex };
+}
+
+function getStatusTokens(colorName) {
+  const s = palette[colorName];
+  if (!s) return null;
+  const bg   = (s[tokenSteps.bg]     || s[100]).hex;
+  const text = (s[tokenSteps.text]   || s[700]).hex;
+  const bord = (s[tokenSteps.border] || s[200]).hex;
+  return { bg, border: bord, text, dot: s[500].hex };
+}
+
+// ====================================================================
+// RENDER — PALETTE GRID
+// ====================================================================
+
+function renderPalette() {
+  const container = document.getElementById('paletteContainer');
+  container.innerHTML = '';
+
+  // Build grid
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:120px repeat(10,1fr);gap:2px;';
+
+  // Header row
+  const emptyCell = document.createElement('div');
+  grid.appendChild(emptyCell);
+  STEPS.forEach(s => {
+    const h = document.createElement('div');
+    h.className = 'ph-step';
+    h.textContent = s;
+    grid.appendChild(h);
+  });
+
+  Object.entries(palette).forEach(([name, scale]) => {
+    const label = document.createElement('div');
+    label.className = 'prow-label';
+    label.textContent = name;
+    grid.appendChild(label);
+
+    STEPS.forEach(step => {
+      const d = scale[step];
+      const cell = document.createElement('div');
+      cell.className = 'pcell' + (step===500?' is500':'');
+      cell.style.background = d.hex;
+      cell.addEventListener('mouseenter', e => showTip(e, name, step, d));
+      cell.addEventListener('mousemove', moveTip);
+      cell.addEventListener('mouseleave', hideTip);
+      cell.addEventListener('click', e => {
+        if (e.detail === 1) {
+          copyToClipboard(d.hex.toUpperCase());
+          showCopyFlash(cell, d.hex.toUpperCase());
+        }
+      });
+
+      if (step === 500) {
+        cell.style.cursor = 'pointer';
+        // Warning badge: check hue similarity with neighbors
+        const warn = checkHueSimilarity(name);
+        if (warn) {
+          const badge = document.createElement('div');
+          badge.className = 'pcell-warn';
+          badge.textContent = '!';
+          badge.style.pointerEvents = 'all';
+
+          // Custom hover tooltip
+          const warnTip = document.createElement('div');
+          warnTip.className = 'pcell-warn-tip';
+          warnTip.textContent = warn;
+          badge.appendChild(warnTip);
+
+          badge.addEventListener('mouseenter', e => {
+            e.stopPropagation();
+            hideTip(); // hide main tooltip
+            warnTip.style.display = 'block';
+          });
+          badge.addEventListener('mouseleave', () => {
+            warnTip.style.display = 'none';
+          });
+
+          cell.appendChild(badge);
+        }
+        cell.addEventListener('dblclick', e => {
+          e.stopPropagation();
+          hideTip();
+          openHuePicker(name, d);
+        });
+      }
+
+      grid.appendChild(cell);
+    });
+  });
+
+  container.appendChild(grid);
+}
+
+// ====================================================================
+// RENDER — UNIFORM L PROOF
+// ====================================================================
+
+function renderProof() {
+  const container = document.getElementById('proofContainer');
+  container.innerHTML = '';
+
+  STEPS.forEach((step, si) => {
+    const col = document.createElement('div');
+    col.className = 'proof-col';
+    const lbl = document.createElement('div');
+    lbl.className = 'proof-step-label';
+    lbl.textContent = step;
+    col.appendChild(lbl);
+
+    Object.entries(palette).forEach(([name, scale]) => {
+      const d = scale[step];
+      const sq = document.createElement('div');
+      sq.className = 'proof-square';
+      sq.style.background = d.hex;
+      sq.title = `${name}-${step}: L=${(d.l*100).toFixed(1)}%`;
+      col.appendChild(sq);
+    });
+
+    container.appendChild(col);
+  });
+}
+
+// ====================================================================
+// RENDER — DEMO
+// ====================================================================
+
+const TAG_COLORS = ['blue','sky','purple','pink','red','orange','lime','green'];
+const ALERT_CFG = [
+  { color: 'red',    icon: '✕', title: 'Critical: Node Unreachable',  desc: 'srv-prod-07 failed health check ×3' },
+  { color: 'orange', icon: '▲', title: 'Warning: Memory Pressure',    desc: 'Free mem < 512MB on cluster-02' },
+  { color: 'blue',   icon: 'ℹ', title: 'Info: Deployment Running',    desc: 'Rolling update v2.4.1 in progress' },
+  { color: 'green',  icon: '✓', title: 'Resolved: Disk Alert Cleared', desc: 'Disk usage back to 61% after cleanup' },
+];
+const STATUS_CFG = [
+  { color: 'green',        label: 'Running',     count: 12 },
+  { color: 'red',          label: 'Critical',    count: 1  },
+  { color: 'orange',       label: 'Warning',     count: 3  },
+  { color: 'blue',         label: 'Deploying',   count: 2  },
+  { color: 'cool-gray',    label: 'Idle',        count: 5  },
+  { color: 'purple',       label: 'Maintenance', count: 1  },
+];
+
+function renderDemo() {
+  const container = document.getElementById('demoContainer');
+  container.innerHTML = '';
+
+  // 1. Tag subtle
+  appendCard(container, 'Tag · Subtle', () => {
+    const wrap = el('div', 'tag-wrap');
+    TAG_COLORS.forEach(c => {
+      const t = getTagTokens(c, 'subtle');
+      if (!t) return;
+      wrap.appendChild(makeTag(t, c));
+    });
+    return wrap;
+  });
+
+  // 2. Tag solid
+  appendCard(container, 'Tag · Solid', () => {
+    const wrap = el('div', 'tag-wrap');
+    TAG_COLORS.forEach(c => {
+      const t = getTagTokens(c, 'solid');
+      if (!t) return;
+      wrap.appendChild(makeTag(t, c));
+    });
+    return wrap;
+  });
+
+  // 3. Tag outline
+  appendCard(container, 'Tag · Outline', () => {
+    const wrap = el('div', 'tag-wrap');
+    TAG_COLORS.forEach(c => {
+      const t = getTagTokens(c, 'outline');
+      if (!t) return;
+      wrap.appendChild(makeTag(t, c));
+    });
+    return wrap;
+  });
+
+  // 4. Alerts
+  appendCard(container, 'Alert · Severity Levels', () => {
+    const list = el('div', 'alert-list');
+    ALERT_CFG.forEach(({ color, icon, title, desc }) => {
+      const t = getAlertTokens(color);
+      if (!t) return;
+      const a = el('div', 'alert');
+      a.style.cssText = `background:${t.bg};border-color:${t.border};color:${t.text};`;
+      a.innerHTML = `<span class="alert-icon" style="color:${t.icon}">${icon}</span>
+        <div><div class="alert-title">${title}</div><div class="alert-desc">${desc}</div></div>`;
+      list.appendChild(a);
+    });
+    return list;
+  }, 'span2');
+
+  // 5. Status badges
+  appendCard(container, 'Status Badge · Server Nodes', () => {
+    const wrap = el('div', 'badge-wrap');
+    STATUS_CFG.forEach(({ color, label, count }) => {
+      const t = getStatusTokens(color);
+      if (!t) return;
+      const b = el('span', 'badge');
+      b.style.cssText = `background:${t.bg};border-color:${t.border};color:${t.text};`;
+      b.innerHTML = `<span class="badge-dot" style="background:${t.dot}"></span>${label} <span style="opacity:0.5">${count}</span>`;
+      wrap.appendChild(b);
+    });
+    return wrap;
+  });
+
+  // 6. Server alert customizer note
+  appendCard(container, 'User-Customizable Alert Color', () => {
+    const wrap = el('div');
+    wrap.innerHTML = `<div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6;">
+      사용자가 알람 색상을 변경해도 bg/text/border 토큰이<br>
+      OKLCH L 기준으로 자동 계산됩니다.
+    </div>`;
+    const row = el('div', 'tag-wrap');
+    ['blue','purple','red','orange','green','pink'].forEach(c => {
+      const t = getTagTokens(c, 'subtle');
+      if (!t) return;
+      const a = el('div', 'alert');
+      a.style.cssText = `background:${t.bg};border-color:${t.border};color:${t.text};padding:8px 12px;font-size:12px;`;
+      a.innerHTML = `<span style="color:${t.dot};font-size:12px">●</span> CPU 알람 · <b>${c}</b>`;
+      row.appendChild(a);
+    });
+    wrap.appendChild(row);
+    return wrap;
+  }, 'span2');
+}
+
+function makeTag(t, label) {
+  const tag = el('span', 'tag');
+  tag.style.cssText = `background:${t.bg};color:${t.text};border-color:${t.border};`;
+  tag.innerHTML = `<span class="tag-dot" style="background:${t.dot}"></span>${label}`;
+  return tag;
+}
+
+function appendCard(container, title, content, extraClass) {
+  const card = el('div', 'demo-card');
+  if (extraClass) card.style.gridColumn = extraClass === 'span2' ? 'span 2' : '';
+  const h = el('div', 'demo-card-title');
+  h.textContent = title;
+  card.appendChild(h);
+  card.appendChild(content());
+  container.appendChild(card);
+}
+
+function el(tag, cls) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  return e;
+}
+
+// ====================================================================
+// TOKEN TABLE
+// ====================================================================
+
+function renderTokenTable() {
+  const table = document.getElementById('tokenTable');
+
+  table.innerHTML = `<thead><tr>
+    <th>Color</th>
+    <th>BG (${tokenSteps.bg})</th>
+    <th>Text (${tokenSteps.text})</th>
+    <th>Border (${tokenSteps.border})</th>
+    <th>Solid (500)</th>
+    <th>Contrast</th>
+  </tr></thead><tbody id="tokenBody"></tbody>`;
+
+  const tbody = document.getElementById('tokenBody');
+
+  TAG_COLORS.concat(['cool-gray','slate']).forEach(name => {
+    const s = palette[name];
+    if (!s) return;
+    const bg   = (s[tokenSteps.bg]     || s[100]).hex;
+    const text = (s[tokenSteps.text]   || s[700]).hex;
+    const bord = (s[tokenSteps.border] || s[200]).hex;
+    const solid = s[500].hex;
+
+    const crTextBg = contrastRatio(text, bg);
+    const crSolid  = contrastRatio(solid, bg);
+
+    function crBadge(cr, label) {
+      const cls = cr >= 4.5 ? 'pass' : cr >= 3.0 ? 'warn' : 'fail';
+      const lbl = cr >= 4.5 ? 'AA ✓' : cr >= 3.0 ? 'AA Lg' : '✕ Fail';
+      return `<span class="cr-badge ${cls}">${cr.toFixed(2)}:1 ${lbl}</span>`;
+    }
+
+    // Warn if text on bg doesn't pass
+    const rowWarn = crTextBg < 3.0 ? ' style="background:rgba(180,60,60,0.05)"' : '';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--text);">${name}</td>
+      <td><span class="swatch-cell"><span class="swatch-mini" style="background:${bg}"></span><span>${bg.toUpperCase()}</span></span></td>
+      <td>
+        <span class="swatch-cell">
+          <span class="swatch-mini" style="background:${text}"></span>
+          <span>${text.toUpperCase()}</span>
+        </span>
+        ${crTextBg < 3.0 ? '<span style="margin-left:4px;font-size:12px;color:#c05050;">⚠ Low</span>' : ''}
+      </td>
+      <td><span class="swatch-cell"><span class="swatch-mini" style="background:${bord}"></span><span>${bord.toUpperCase()}</span></span></td>
+      <td><span class="swatch-cell"><span class="swatch-mini" style="background:${solid}"></span><span>${solid.toUpperCase()}</span></span></td>
+      <td>
+        ${crBadge(crTextBg)}
+        <div style="margin-top:3px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text3);">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${bg};border:1px solid ${bord};vertical-align:middle;margin-right:3px;"></span>
+          preview
+          <span style="color:${text};font-weight:600;"> Aa</span>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ====================================================================
+// COPY FLASH
+// ====================================================================
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  ta.remove();
+}
+
+function showCopyFlash(cell, hex) {
+  const flash = document.createElement('div');
+  flash.className = 'copy-flash';
+  flash.textContent = hex;
+  cell.appendChild(flash);
+  requestAnimationFrame(() => {
+    flash.style.opacity = '1';
+    flash.style.transform = 'translateY(-6px)';
+  });
+  setTimeout(() => {
+    flash.style.opacity = '0';
+    setTimeout(() => flash.remove(), 300);
+  }, 800);
+}
+
+// ====================================================================
+// HUE SIMILARITY CHECK
+// ====================================================================
+
+function getEffectiveHue(name) {
+  return (customHues[name] !== undefined ? customHues[name] : COLORS[name].h) + params.hueShift;
+}
+
+function hueDiff(a, b) {
+  // Circular difference (0–360)
+  const d = Math.abs(((a - b) + 360) % 360);
+  return Math.min(d, 360 - d);
+}
+
+const MIN_HUE_DIFF = 5; // minimum hue degrees between any two colors
+
+function checkHueSimilarity(name) {
+  const myH = getEffectiveHue(name);
+  const colorNames = Object.keys(COLORS);
+  for (const other of colorNames) {
+    if (other === name) continue;
+    const diff = hueDiff(myH, getEffectiveHue(other));
+    if (diff < MIN_HUE_DIFF) {
+      return `'${name}'와 '${other}'의 Hue 차이가 ${diff.toFixed(1)}°입니다.\n구분되려면 최소 ${MIN_HUE_DIFF}°이상 차이가 나야 합니다.`;
+    }
+  }
+  return null;
+}
+
+// ====================================================================
+// HUE PICKER MODAL
+// ====================================================================
+
+function buildHueGradient(l, c) {
+  // Build a full hue sweep at fixed L and C for the track background
+  const stops = [];
+  for (let h = 0; h <= 360; h += 6) {
+    const { hex } = oklchToHex(l, c, h);
+    stops.push(hex);
+  }
+  return `linear-gradient(to right, ${stops.join(',')})`;
+}
+
+function openHuePicker(name, anchorData) {
+  const defaultH = COLORS[name].h;
+  let currentH = customHues[name] !== undefined ? customHues[name] : defaultH;
+  const l = anchorData.l;
+  const c = anchorData.c;
+
+  // Build overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'hue-overlay';
+
+  overlay.innerHTML = `
+    <div class="hue-modal" id="hueModal">
+      <div class="hue-modal-title">${name} · Hue 편집</div>
+      <div class="hue-modal-sub">더블클릭한 500 앵커의 Hue를 조정합니다. L과 Chroma는 유지됩니다.</div>
+
+      <div class="hue-preview-row">
+        <div class="hue-preview-swatch" id="hpSwatch"></div>
+        <div class="hue-preview-info" id="hpInfo"></div>
+      </div>
+
+      <div class="hue-track-wrap">
+        <input type="range" class="hue-track" id="hpTrack"
+          min="0" max="359" step="1" value="${currentH}">
+        <div class="hue-val-label"><span>0°</span><span>180°</span><span>359°</span></div>
+      </div>
+
+      <div id="hpWarnWrap"></div>
+
+      <div class="hue-modal-footer">
+        <button class="hue-btn secondary" id="hpReset">기본값으로</button>
+        <button class="hue-btn secondary" id="hpCancel">취소</button>
+        <button class="hue-btn primary" id="hpApply">적용</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const track = document.getElementById('hpTrack');
+  const swatch = document.getElementById('hpSwatch');
+  const info = document.getElementById('hpInfo');
+  const warnWrap = document.getElementById('hpWarnWrap');
+
+  // Set hue track gradient
+  track.style.background = buildHueGradient(l, Math.max(c, 0.06));
+
+  function updatePreview(h) {
+    const { hex } = oklchToHex(l, c, h);
+    swatch.style.background = hex;
+    info.innerHTML = `<span style="color:var(--text3)">Hue</span> <b style="color:var(--text)">${Math.round(h)}°</b><br>
+      <span style="color:var(--text3)">HEX</span> <b style="color:var(--text)">${hex.toUpperCase()}</b><br>
+      <span style="color:var(--text3)">Default</span> <b style="color:var(--text4)">${defaultH}°</b>`;
+
+    // Check similarity: compare h directly against all other colors' effective hues
+    const myH = h + params.hueShift;
+    let minDiff = 999, nearest = '';
+    Object.keys(COLORS).forEach(other => {
+      if (other === name) return;
+      const otherH = (customHues[other] !== undefined ? customHues[other] : COLORS[other].h) + params.hueShift;
+      const diff = hueDiff(myH, otherH);
+      if (diff < minDiff) { minDiff = diff; nearest = other; }
+    });
+
+    if (minDiff < MIN_HUE_DIFF) {
+      warnWrap.innerHTML = `
+        <div class="hue-similarity-warn">
+          <span class="hue-warn-icon">⚠</span>
+          <div>
+            <b>'${nearest}'과의 Hue 차이: ${minDiff.toFixed(1)}°</b>
+            색상이 서로 구분되려면 최소 ${MIN_HUE_DIFF}° 이상 차이가 나야 합니다. 현재 너무 가깝습니다.
+          </div>
+        </div>`;
+    } else {
+      warnWrap.innerHTML = '';
+    }
+  }
+
+  updatePreview(currentH);
+
+  track.addEventListener('input', () => {
+    currentH = parseInt(track.value);
+    updatePreview(currentH);
+  });
+
+  document.getElementById('hpReset').addEventListener('click', () => {
+    currentH = defaultH;
+    track.value = currentH;
+    delete customHues[name];
+    updatePreview(currentH);
+  });
+
+  document.getElementById('hpCancel').addEventListener('click', () => overlay.remove());
+
+  document.getElementById('hpApply').addEventListener('click', () => {
+    customHues[name] = currentH;
+    overlay.remove();
+    rebuild();
+  });
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+// ====================================================================
+// TOOLTIP
+// ====================================================================
+
+const tipEl = document.getElementById('tip');
+function showTip(e, name, step, d) {
+  document.getElementById('tipSwatch').style.background = d.hex;
+  document.getElementById('tipName').textContent = `${name}-${step}`;
+  document.getElementById('tipHex').textContent = d.hex.toUpperCase();
+  document.getElementById('tipOklch').textContent = `${(d.l*100).toFixed(1)}% ${d.c.toFixed(4)} ${d.h.toFixed(1)}°`;
+  document.getElementById('tipHsl').textContent = d.hsl;
+  document.getElementById('tipL').textContent = `${(d.l*100).toFixed(2)}% (step target: ${(L_TABLE[currentTheme][step]*100).toFixed(2)}%)`;
+  const bgHex = currentTheme === 'dark' ? '#0e1015' : '#f2f3f5';
+  const cr = contrastRatio(d.hex, bgHex);
+  const label = cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : cr >= 3 ? 'AA Large' : 'Fail';
+  document.getElementById('tipWcag').innerHTML = `vs page bg: ${cr.toFixed(2)}:1 <b>${label}</b>`;
+  tipEl.style.display = 'block';
+  moveTip(e);
+}
+function moveTip(e) {
+  const x = e.clientX + 16, y = e.clientY + 16;
+  tipEl.style.left = (x + 220 > window.innerWidth ? e.clientX - 226 : x) + 'px';
+  tipEl.style.top  = (y + 200 > window.innerHeight ? e.clientY - 206 : y) + 'px';
+}
+function hideTip() { tipEl.style.display = 'none'; }
+
+// ====================================================================
+// CONTROLS
+// ====================================================================
+
+function initControls() {
+  const chromaR = document.getElementById('sChroma');
+  const hueR    = document.getElementById('sHue');
+  const spreadR = document.getElementById('sSpread');
+
+  function update() {
+    params.chromaScale = parseFloat(chromaR.value);
+    params.hueShift    = parseFloat(hueR.value);
+    params.lSpread     = parseFloat(spreadR.value);
+    document.getElementById('vChroma').textContent = params.chromaScale.toFixed(2);
+    document.getElementById('vHue').textContent    = params.hueShift + '°';
+    document.getElementById('vSpread').textContent = params.lSpread.toFixed(2);
+    rebuild();
+  }
+
+  chromaR.addEventListener('input', update);
+  hueR.addEventListener('input', update);
+  spreadR.addEventListener('input', update);
+}
+
+function setTheme(t) {
+  currentTheme = t;
+  document.body.setAttribute('data-theme', t);
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.includes(t === 'light' ? 'Light' : 'Dark'));
+  });
+  rebuild();
+}
+
+function rebuild() {
+  buildPalette();
+  renderPalette();
+  renderProof();
+  renderCustomizer();
+  renderDemo();
+  renderTokenTable();
+}
+
+// ====================================================================
+// FIGMA TOKEN EXPORT
+// Format: Style Dictionary / Figma Tokens plugin compatible
+// { "color": { "blue": { "500": { "value": "#hex", "type": "color" } } } }
+// Two files: light.tokens.json / dark.tokens.json
+// ====================================================================
+
+function buildTokensJSON(pal, modeName) {
+  // Exact format matching Figma Variables export
+  // { color: { colorName: { step: { $type, $value, $description } } } }, $extensions: { com.figma.modeName } }
+
+  function makeToken(hexStr, l, c, h) {
+    const r = parseInt(hexStr.slice(1,3), 16) / 255;
+    const g = parseInt(hexStr.slice(3,5), 16) / 255;
+    const b = parseInt(hexStr.slice(5,7), 16) / 255;
+    return {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          +r.toFixed(10),
+          +g.toFixed(10),
+          +b.toFixed(10)
+        ],
+        "alpha": 1,
+        "hex": hexStr.toUpperCase()
+      },
+      "$description": `oklch(${(l*100).toFixed(2)}% ${c.toFixed(4)} ${h.toFixed(1)})`
+    };
+  }
+
+  const color = {};
+  Object.keys(pal).forEach(colorName => {
+    // camelCase key (e.g. neutral-gray → neutralGray)
+    const key = colorName.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    color[key] = {};
+    STEPS.forEach(step => {
+      const d = pal[colorName][step];
+      color[key][step] = makeToken(d.hex, d.l, d.c, d.h);
+    });
+  });
+
+  return {
+    color,
+    "$extensions": {
+      "com.figma.modeName": modeName
+    }
+  };
+}
+
+function downloadFigmaJSON() {
+  // Generate light palette
+  const savedTheme = currentTheme;
+  currentTheme = 'light';
+  buildPalette();
+  const lightTokens = buildTokensJSON(JSON.parse(JSON.stringify(palette)), 'light');
+
+  // Generate dark palette
+  currentTheme = 'dark';
+  buildPalette();
+  const darkTokens = buildTokensJSON(JSON.parse(JSON.stringify(palette)), 'dark');
+
+  // Restore
+  currentTheme = savedTheme;
+  buildPalette();
+
+  showJSONModal(
+    JSON.stringify(lightTokens, null, 2),
+    JSON.stringify(darkTokens, null, 2)
+  );
+}
+
+function triggerDownload(content, filename) {
+  const blob = new Blob([content], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function showJSONModal(lightStr, darkStr) {
+  const existing = document.getElementById('jsonModal');
+  if (existing) existing.remove();
+
+  let activeTab = 'light';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'jsonModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:780px;max-height:84vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.5);overflow:hidden;';
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0;gap:12px;';
+
+  // Tabs
+  const tabs = document.createElement('div');
+  tabs.style.cssText = 'display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:3px;';
+  tabs.innerHTML = `
+    <button id="tabLight" style="padding:5px 14px;border-radius:6px;border:none;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.15s;background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.15);">☀ light.tokens.json</button>
+    <button id="tabDark"  style="padding:5px 14px;border-radius:6px;border:none;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.15s;background:transparent;color:var(--text3);">☾ dark.tokens.json</button>
+  `;
+
+  // Actions
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:8px;align-items:center;margin-left:auto;';
+  const btnStyle = `padding:6px 13px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;`;
+  actions.innerHTML = `
+    <button id="copyJSONBtn"     style="${btnStyle}">Copy</button>
+    <button id="dlLightBtn"      style="${btnStyle}">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v5.5M2.5 4l2.5 3L7.5 4M1 9h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      light.tokens.json
+    </button>
+    <button id="dlDarkBtn"       style="${btnStyle}">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v5.5M2.5 4l2.5 3L7.5 4M1 9h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      dark.tokens.json
+    </button>
+    <button id="closeModalBtn"   style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+  `;
+
+  header.appendChild(tabs);
+  header.appendChild(actions);
+
+  // Body — pre
+  const pre = document.createElement('pre');
+  pre.style.cssText = 'margin:0;padding:18px 20px;overflow:auto;flex:1;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--text2);line-height:1.65;white-space:pre;';
+  pre.textContent = lightStr;
+
+  // Footer
+  const footer = document.createElement('div');
+  footer.style.cssText = 'padding:10px 18px;border-top:1px solid var(--border);flex-shrink:0;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--text3);';
+  footer.textContent = 'Figma Tokens 플러그인 → Import → 파일 선택 또는 JSON 붙여넣기';
+
+  modal.appendChild(header);
+  modal.appendChild(pre);
+  modal.appendChild(footer);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Tab switching
+  function switchTab(tab) {
+    activeTab = tab;
+    pre.textContent = tab === 'light' ? lightStr : darkStr;
+    const tl = document.getElementById('tabLight');
+    const td = document.getElementById('tabDark');
+    if (tab === 'light') {
+      tl.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-family:"IBM Plex Mono",monospace;font-size:12px;cursor:pointer;transition:all 0.15s;background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.15);';
+      td.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-family:"IBM Plex Mono",monospace;font-size:12px;cursor:pointer;transition:all 0.15s;background:transparent;color:var(--text3);';
+    } else {
+      td.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-family:"IBM Plex Mono",monospace;font-size:12px;cursor:pointer;transition:all 0.15s;background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.15);';
+      tl.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-family:"IBM Plex Mono",monospace;font-size:12px;cursor:pointer;transition:all 0.15s;background:transparent;color:var(--text3);';
+    }
+  }
+
+  document.getElementById('tabLight').addEventListener('click', () => switchTab('light'));
+  document.getElementById('tabDark').addEventListener('click',  () => switchTab('dark'));
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('closeModalBtn').addEventListener('click', () => overlay.remove());
+
+  document.getElementById('dlLightBtn').addEventListener('click', () => triggerDownload(lightStr, 'light.tokens.json'));
+  document.getElementById('dlDarkBtn').addEventListener('click',  () => triggerDownload(darkStr,  'dark.tokens.json'));
+
+  document.getElementById('copyJSONBtn').addEventListener('click', function() {
+    const str = activeTab === 'light' ? lightStr : darkStr;
+    navigator.clipboard.writeText(str).then(() => {
+      this.textContent = 'Copied ✓';
+      this.style.color = '#3cb464';
+      this.style.borderColor = '#3cb464';
+      setTimeout(() => { this.textContent = 'Copy'; this.style.color = ''; this.style.borderColor = ''; }, 2000);
+    }).catch(() => {
+      const range = document.createRange();
+      range.selectNodeContents(pre);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      this.textContent = 'Selected ✓';
+      setTimeout(() => { this.textContent = 'Copy'; }, 2000);
+    });
+  });
+}
+
+
+
+const STORAGE_KEY = 'oklch-palette-settings-v1';
+
+function saveSettings() {
+  const state = {
+    params,
+    currentTheme,
+    customHues,
+    tokenSteps,
+    colorsHue: Object.fromEntries(Object.entries(COLORS).map(([k,v]) => [k, v.h])),
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Bake customHues into COLORS as new defaults
+    Object.entries(customHues).forEach(([name, h]) => {
+      if (COLORS[name]) COLORS[name].h = h;
+    });
+    customHues = {};
+
+    const btn = document.getElementById('saveBtn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="#3ca864" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> 저장됨`;
+    btn.style.color = '#3ca864';
+    btn.style.borderColor = '#3ca86440';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 1800);
+    rebuild();
+  } catch(e) {
+    console.warn('localStorage unavailable:', e);
+  }
+}
+
+function resetSettings() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  // Reset all state to defaults
+  params = { chromaScale: 1.4, hueShift: 0, lSpread: 1.0 };
+  customHues = {};
+  tokenSteps = { bg: 100, text: 700, border: 200 };
+  currentTheme = 'dark';
+  // Sync sliders
+  document.getElementById('sChroma').value = params.chromaScale;
+  document.getElementById('sHue').value = params.hueShift;
+  document.getElementById('sSpread').value = params.lSpread;
+  document.getElementById('vChroma').textContent = params.chromaScale.toFixed(2);
+  document.getElementById('vHue').textContent = params.hueShift + '°';
+  document.getElementById('vSpread').textContent = params.lSpread.toFixed(2);
+  setTheme('dark');
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    if (state.params) Object.assign(params, state.params);
+    if (state.customHues) customHues = state.customHues;
+    if (state.tokenSteps) Object.assign(tokenSteps, state.tokenSteps);
+    // Restore baked COLORS hues
+    if (state.colorsHue) {
+      Object.entries(state.colorsHue).forEach(([name, h]) => {
+        if (COLORS[name]) COLORS[name].h = h;
+      });
+    }
+    // Sync sliders
+    document.getElementById('sChroma').value = params.chromaScale;
+    document.getElementById('sHue').value = params.hueShift;
+    document.getElementById('sSpread').value = params.lSpread;
+    document.getElementById('vChroma').textContent = params.chromaScale.toFixed(2);
+    document.getElementById('vHue').textContent = params.hueShift + '°';
+    document.getElementById('vSpread').textContent = params.lSpread.toFixed(2);
+    if (state.currentTheme) {
+      currentTheme = state.currentTheme;
+      document.body.setAttribute('data-theme', currentTheme);
+      document.querySelectorAll('.mode-btn').forEach(b => {
+        b.classList.toggle('active', b.textContent.includes(currentTheme === 'light' ? 'Light' : 'Dark'));
+      });
+    }
+  } catch(e) {
+    console.warn('Failed to load settings:', e);
+  }
+}
+
+initControls();
+loadSettings();
+rebuild();
+</script>
+</body>
+</html>
