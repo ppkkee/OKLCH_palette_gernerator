@@ -810,8 +810,14 @@ input[type="range"]::-webkit-slider-thumb {
     <div class="section-head">
       <div class="section-title">Base Palette · OKLCH Uniform Lightness</div>
       <div class="section-line"></div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text3);white-space:nowrap;">
-        ● = 500 anchor
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text3);white-space:nowrap;">
+          ● = 500 anchor &nbsp;·&nbsp; 더블클릭 = Hue 편집 &nbsp;·&nbsp; 라벨 더블클릭 = 이름 변경
+        </div>
+        <button class="dl-btn" onclick="openAddColorModal()" style="white-space:nowrap;">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          색상 추가
+        </button>
       </div>
     </div>
     <div id="paletteContainer"></div>
@@ -965,9 +971,10 @@ let params = {
 };
 let currentTheme = 'dark';
 
-// User-overridden hues per color (null = use default from COLORS)
+// User-overridden hues per color
 let customHues = {};
-// e.g. customHues['blue'] = 200 (override hue to 200)
+
+const STORAGE_KEY = 'oklch-palette-settings-v1';
 
 // ====================================================================
 // MATH
@@ -1243,22 +1250,57 @@ function renderPalette() {
   });
 
   Object.entries(palette).forEach(([name, scale]) => {
+    // Row wrapper — drag handle + label + 10 color cells
+    const rowCells = [];
+
     const label = document.createElement('div');
     label.className = 'prow-label';
+    label.style.cssText = 'position:relative;display:flex;align-items:center;gap:4px;cursor:default;';
+    label.dataset.rowName = name;
+
+    // Drag handle
+    const dragHandle = document.createElement('span');
+    dragHandle.innerHTML = '⠿';
+    dragHandle.title = '드래그로 순서 변경';
+    dragHandle.style.cssText = 'display:none;cursor:grab;color:var(--text4);font-size:14px;flex-shrink:0;user-select:none;line-height:1;';
+    dragHandle.dataset.drag = 'handle';
+
+    // Name text / info icon
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;';
+    nameSpan.title = '더블클릭으로 이름 변경';
     if (name === 'yellow') {
-      label.innerHTML = `${name} <span class="yellow-info-icon" title="노란색은 시각적으로 더 밝게 인지됩니다. 50-500은 L을 +0.05 보정하고, 600-900은 amber 방향으로 hue를 shift해 텍스트 접근성을 확보합니다.">ⓘ</span>`;
+      nameSpan.innerHTML = `${name} <span class="yellow-info-icon" title="노란색은 시각적으로 더 밝게 인지됩니다. 50-500은 L을 +0.05 보정하고, 600-900은 amber 방향으로 hue를 shift해 텍스트 접근성을 확보합니다.">ⓘ</span>`;
     } else if (name === 'lime') {
-      label.innerHTML = `${name} <span class="yellow-info-icon" title="라임색은 시각적으로 더 밝게 인지됩니다. 50-500은 L을 +0.05 보정하고, 600-900은 green 방향으로 hue를 shift해 텍스트 접근성을 확보합니다.">ⓘ</span>`;
+      nameSpan.innerHTML = `${name} <span class="yellow-info-icon" title="라임색은 시각적으로 더 밝게 인지됩니다. 50-500은 L을 +0.05 보정하고, 600-900은 green 방향으로 hue를 shift해 텍스트 접근성을 확보합니다.">ⓘ</span>`;
     } else {
-      label.textContent = name;
+      nameSpan.textContent = name;
     }
+
+    // Rename on double-click
+    nameSpan.addEventListener('dblclick', () => openRenameModal(name));
+
+    // Delete button
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '×';
+    delBtn.title = '색상 삭제';
+    delBtn.style.cssText = 'display:none;width:16px;height:16px;border-radius:50%;border:none;background:rgba(200,80,80,0.18);color:var(--text3);font-size:11px;line-height:1;cursor:pointer;flex-shrink:0;padding:0;align-items:center;justify-content:center;';
+    delBtn.addEventListener('click', () => deleteColor(name));
+
+    label.appendChild(dragHandle);
+    label.appendChild(nameSpan);
+    label.appendChild(delBtn);
+    label.addEventListener('mouseenter', () => { dragHandle.style.display = 'inline'; delBtn.style.display = 'flex'; });
+    label.addEventListener('mouseleave', () => { dragHandle.style.display = 'none'; delBtn.style.display = 'none'; });
     grid.appendChild(label);
+    rowCells.push(label);
 
     STEPS.forEach(step => {
       const d = scale[step];
       const cell = document.createElement('div');
       cell.className = 'pcell' + (step===500?' is500':'');
       cell.style.background = d.hex;
+      cell.dataset.rowName = name;
       cell.addEventListener('mouseenter', e => showTip(e, name, step, d));
       cell.addEventListener('mousemove', moveTip);
       cell.addEventListener('mouseleave', hideTip);
@@ -1271,43 +1313,127 @@ function renderPalette() {
 
       if (step === 500) {
         cell.style.cursor = 'pointer';
-        // Warning badge: check hue similarity with neighbors
         const warn = checkHueSimilarity(name);
         if (warn) {
           const badge = document.createElement('div');
           badge.className = 'pcell-warn';
           badge.textContent = '!';
           badge.style.pointerEvents = 'all';
-
-          // Custom hover tooltip
           const warnTip = document.createElement('div');
           warnTip.className = 'pcell-warn-tip';
           warnTip.textContent = warn;
           badge.appendChild(warnTip);
-
-          badge.addEventListener('mouseenter', e => {
-            e.stopPropagation();
-            hideTip(); // hide main tooltip
-            warnTip.style.display = 'block';
-          });
-          badge.addEventListener('mouseleave', () => {
-            warnTip.style.display = 'none';
-          });
-
+          badge.addEventListener('mouseenter', e => { e.stopPropagation(); hideTip(); warnTip.style.display = 'block'; });
+          badge.addEventListener('mouseleave', () => { warnTip.style.display = 'none'; });
           cell.appendChild(badge);
         }
-        cell.addEventListener('dblclick', e => {
-          e.stopPropagation();
-          hideTip();
-          openHuePicker(name, d);
-        });
+        cell.addEventListener('dblclick', e => { e.stopPropagation(); hideTip(); openHuePicker(name, d); });
       }
 
       grid.appendChild(cell);
+      rowCells.push(cell);
     });
   });
 
   container.appendChild(grid);
+
+  // ---- Drag-to-reorder ----
+  setupPaletteDrag(grid);
+}
+
+function setupPaletteDrag(grid) {
+  const COLS = 11; // label + 10 steps
+  let dragName = null, dragRowEls = [], placeholder = [], startY = 0, currentY = 0;
+
+  function getRowEls(name) {
+    return Array.from(grid.children).filter(el => el.dataset.rowName === name);
+  }
+  function getAllRowNames() {
+    const seen = new Set(), order = [];
+    Array.from(grid.children).forEach(el => {
+      const n = el.dataset.rowName;
+      if (n && !seen.has(n)) { seen.add(n); order.push(n); }
+    });
+    return order;
+  }
+  function getRowIndex(name) { return getAllRowNames().indexOf(name); }
+  function getRowTop(name) {
+    const els = getRowEls(name);
+    if (!els.length) return 0;
+    return els[0].getBoundingClientRect().top;
+  }
+
+  grid.addEventListener('mousedown', e => {
+    if (!e.target.dataset.drag) return;
+    e.preventDefault();
+    const label = e.target.closest('[data-row-name]');
+    if (!label) return;
+    dragName = label.dataset.rowName;
+    dragRowEls = getRowEls(dragName);
+    startY = e.clientY;
+
+    // Ghost clone
+    dragRowEls.forEach(el => {
+      el.style.opacity = '0.35';
+    });
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+
+  function onMouseMove(e) {
+    if (!dragName) return;
+    currentY = e.clientY;
+    const dy = currentY - startY;
+
+    // Find which row we're hovering over
+    const names = getAllRowNames();
+    const myIdx = getRowIndex(dragName);
+
+    let targetIdx = myIdx;
+    names.forEach((n, i) => {
+      if (n === dragName) return;
+      const els = getRowEls(n);
+      if (!els.length) return;
+      const rect = els[0].getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      if (dy > 0 && currentY > mid && i > myIdx) targetIdx = i;
+      if (dy < 0 && currentY < mid && i < myIdx) targetIdx = i;
+    });
+
+    if (targetIdx !== myIdx) {
+      // Move in COLORS
+      const entries = Object.entries(COLORS);
+      const myEntry = entries.splice(myIdx, 1)[0];
+      entries.splice(targetIdx, 0, myEntry);
+      Object.keys(COLORS).forEach(k => delete COLORS[k]);
+      entries.forEach(([k,v]) => COLORS[k] = v);
+
+      // Move in TAG_COLORS
+      const ti = TAG_COLORS.indexOf(dragName);
+      if (ti !== -1) {
+        TAG_COLORS.splice(ti, 1);
+        const newTi = Math.min(targetIdx, TAG_COLORS.length);
+        TAG_COLORS.splice(newTi, 0, dragName);
+      }
+
+      startY = currentY;
+      rebuild();
+      // Re-attach drag since DOM rebuilt
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      dragName = null;
+    }
+  }
+
+  function onMouseUp() {
+    if (dragName) {
+      getRowEls(dragName).forEach(el => el.style.opacity = '');
+      dragName = null;
+    }
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
 }
 
 // ====================================================================
@@ -1951,7 +2077,172 @@ function showJSONModal(jsonStr) {
 
 
 
-const STORAGE_KEY = 'oklch-palette-settings-v1';
+// ====================================================================
+// COLOR MANAGEMENT — Add / Delete / Rename
+// ====================================================================
+
+function deleteColor(name) {
+  if (Object.keys(COLORS).length <= 1) return;
+  delete COLORS[name];
+  delete customHues[name];
+  // Remove from TAG_COLORS if present
+  const idx = TAG_COLORS.indexOf(name);
+  if (idx !== -1) TAG_COLORS.splice(idx, 1);
+  rebuild();
+}
+
+function renameColor(oldName, newName) {
+  newName = newName.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!newName || newName === oldName || COLORS[newName]) return;
+
+  // Rebuild COLORS preserving order
+  const entries = Object.entries(COLORS);
+  const newColors = {};
+  entries.forEach(([k, v]) => { newColors[k === oldName ? newName : k] = v; });
+  Object.keys(COLORS).forEach(k => delete COLORS[k]);
+  Object.assign(COLORS, newColors);
+
+  // customHues
+  if (customHues[oldName] !== undefined) {
+    customHues[newName] = customHues[oldName];
+    delete customHues[oldName];
+  }
+  // TAG_COLORS
+  const idx = TAG_COLORS.indexOf(oldName);
+  if (idx !== -1) TAG_COLORS[idx] = newName;
+
+  rebuild();
+}
+
+function openRenameModal(name) {
+  const existing = document.getElementById('renameModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'renameModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;';
+
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:280px;box-shadow:0 16px 48px rgba(0,0,0,0.4);">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--text);margin-bottom:14px;">'${name}' 이름 변경</div>
+      <input id="renameInput" type="text" value="${name}" maxlength="24"
+        style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;margin-bottom:14px;">
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button id="renameCancelBtn" style="padding:6px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;">취소</button>
+        <button id="renameApplyBtn" style="padding:6px 14px;border-radius:7px;border:none;background:#4a7fd4;color:white;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;">변경</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input = document.getElementById('renameInput');
+  input.focus();
+  input.select();
+
+  document.getElementById('renameCancelBtn').addEventListener('click', () => overlay.remove());
+  document.getElementById('renameApplyBtn').addEventListener('click', () => {
+    renameColor(name, input.value);
+    overlay.remove();
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { renameColor(name, input.value); overlay.remove(); }
+    if (e.key === 'Escape') overlay.remove();
+  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+function openAddColorModal() {
+  const existing = document.getElementById('addColorModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'addColorModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;';
+
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:300px;box-shadow:0 16px 48px rgba(0,0,0,0.4);">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--text);margin-bottom:16px;">색상 추가</div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-bottom:5px;">색상 이름</div>
+        <input id="addColorName" type="text" placeholder="예: teal" maxlength="24"
+          style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;">
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-bottom:5px;">500 기준 HEX (선택)</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="addColorHex" type="text" placeholder="#3B82F6" maxlength="7"
+            style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;">
+          <div id="addColorSwatch" style="width:32px;height:32px;border-radius:7px;border:1px solid var(--border);background:#888;flex-shrink:0;transition:background 0.15s;"></div>
+        </div>
+        <div id="addColorInfo" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-top:5px;min-height:16px;"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button id="addCancelBtn" style="padding:6px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;">취소</button>
+        <button id="addApplyBtn" style="padding:6px 14px;border-radius:7px;border:none;background:#4a7fd4;color:white;font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;">추가</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const hexInput = document.getElementById('addColorHex');
+  const swatch = document.getElementById('addColorSwatch');
+  const info = document.getElementById('addColorInfo');
+  let resolvedH = 220, resolvedC = 0.10;
+
+  function hexToOklchLocal(hex) {
+    let r = parseInt(hex.slice(1,3),16)/255;
+    let g = parseInt(hex.slice(3,5),16)/255;
+    let b = parseInt(hex.slice(5,7),16)/255;
+    const lin = v => v <= 0.04045 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+    r = lin(r); g = lin(g); b = lin(b);
+    const l_ = Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b);
+    const m_ = Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b);
+    const s_ = Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+    const a = 1.9779984951*l_-2.4285922050*m_+0.4505937099*s_;
+    const b2= 0.0259040371*l_+0.7827717662*m_-0.8086757660*s_;
+    const C = Math.sqrt(a*a+b2*b2);
+    let H = Math.atan2(b2,a)*180/Math.PI;
+    if (H<0) H+=360;
+    return { h: Math.round(H), c: +C.toFixed(3) };
+  }
+
+  hexInput.addEventListener('input', () => {
+    const val = hexInput.value.trim();
+    const full = val.startsWith('#') ? val : '#' + val;
+    if (/^#[0-9a-fA-F]{6}$/.test(full)) {
+      hexInput.style.borderColor = '';
+      swatch.style.background = full;
+      const { h, c } = hexToOklchLocal(full);
+      resolvedH = h; resolvedC = c;
+      info.textContent = `→ oklch(57% ${c} ${h}°)`;
+    } else {
+      hexInput.style.borderColor = 'rgba(200,80,80,0.5)';
+      info.textContent = '';
+    }
+  });
+
+  document.getElementById('addCancelBtn').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  document.getElementById('addApplyBtn').addEventListener('click', () => {
+    const rawName = document.getElementById('addColorName').value.trim().toLowerCase().replace(/\s+/g,'-');
+    if (!rawName) { document.getElementById('addColorName').style.borderColor = 'rgba(200,80,80,0.5)'; return; }
+    if (COLORS[rawName]) { document.getElementById('addColorName').style.borderColor = 'rgba(200,80,80,0.5)'; info.textContent = '이미 존재하는 이름입니다.'; return; }
+    COLORS[rawName] = { h: resolvedH, c: resolvedC };
+    TAG_COLORS.push(rawName);
+    overlay.remove();
+    rebuild();
+  });
+
+  document.getElementById('addColorName').addEventListener('keydown', e => { if (e.key === 'Escape') overlay.remove(); });
+}
+
+// ====================================================================
+// SETTINGS PERSISTENCE
+// ====================================================================
 
 function saveSettings() {
   const state = {
@@ -1960,6 +2251,8 @@ function saveSettings() {
     customHues,
     tokenSteps,
     colorsHue: Object.fromEntries(Object.entries(COLORS).map(([k,v]) => [k, v.h])),
+    colorsFull: JSON.parse(JSON.stringify(COLORS)),
+    tagColors: [...TAG_COLORS],
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -1968,7 +2261,6 @@ function saveSettings() {
       if (COLORS[name]) COLORS[name].h = h;
     });
     customHues = {};
-
     const btn = document.getElementById('saveBtn');
     const orig = btn.innerHTML;
     btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="#3ca864" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> 저장됨`;
@@ -2006,11 +2298,19 @@ function loadSettings() {
     if (state.params) Object.assign(params, state.params);
     if (state.customHues) customHues = state.customHues;
     if (state.tokenSteps) Object.assign(tokenSteps, state.tokenSteps);
-    // Restore baked COLORS hues
-    if (state.colorsHue) {
+    // Restore full COLORS (user-added colors + renames)
+    if (state.colorsFull) {
+      Object.keys(COLORS).forEach(k => delete COLORS[k]);
+      Object.assign(COLORS, state.colorsFull);
+    } else if (state.colorsHue) {
       Object.entries(state.colorsHue).forEach(([name, h]) => {
         if (COLORS[name]) COLORS[name].h = h;
       });
+    }
+    // Restore TAG_COLORS
+    if (state.tagColors) {
+      TAG_COLORS.length = 0;
+      state.tagColors.forEach(c => TAG_COLORS.push(c));
     }
     // Sync sliders
     document.getElementById('sChroma').value = params.chromaScale;
