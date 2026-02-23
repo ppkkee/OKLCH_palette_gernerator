@@ -944,23 +944,17 @@ const COLORS = {
   'neutral-gray': { h: 267,  c: 0.005 },
   'cool-gray':    { h: 254,  c: 0.016 },
   'slate':        { h: 244,  c: 0.028 },
+  'indigo':       { h: 272,  c: 0.090 },
   'blue':         { h: 259,  c: 0.125 },
-  'sky':          { h: 216,  c: 0.105 },
+  'sky':          { h: 230,  c: 0.113 },
+  'violet':       { h: 300,  c: 0.115 },
   'purple':       { h: 288,  c: 0.105 },
   'pink':         { h: 1,    c: 0.100 },
   'red':          { h: 19,   c: 0.130 },
   'orange':       { h: 62,   c: 0.118 },
-  'yellow':       { h: 98,   c: 0.165 },   // yellow: special handling — higher chroma to avoid muddy look
-  'lime':         { h: 131,  c: 0.108 },
+  'yellow':       { h: 98,   c: 0.140 },   // yellow: visual L correction applied in buildScale
+  'lime':         { h: 135,  c: 0.130 },   // lime: same L correction as yellow
   'green':        { h: 159,  c: 0.105 },
-};
-
-// Yellow special: visual correction (dark yellow problem)
-// Yellow 700+ gets hue shifted toward amber + L correction
-const YELLOW_CORRECTION = {
-  700: { hShift: -8,  lAdj: +0.03 },
-  800: { hShift: -12, lAdj: +0.05 },
-  900: { hShift: -15, lAdj: +0.06 },
 };
 
 // Global user params
@@ -1057,6 +1051,7 @@ let palette = {};
 function buildScale(name, base, theme) {
   const Ltable = L_TABLE[theme];
   const isYellow = name === 'yellow';
+  const isLime   = name === 'lime';
   const scale = {};
   // Use custom hue if user overrode it
   const baseH = (customHues[name] !== undefined) ? customHues[name] : base.h;
@@ -1069,37 +1064,44 @@ function buildScale(name, base, theme) {
     l = l500 + (l - l500) * params.lSpread;
     l = Math.max(0.05, Math.min(0.99, l));
 
-    // Yellow & Lime: global L boost (+0.05) — human eye perceives these hues as brighter
-    if (isYellow || name === 'lime') {
-      l = Math.min(0.99, l + 0.05);
+    // Yellow & Lime: 시각적 밝기 보정 — 스텝별 차등 적용
+    if (isYellow || isLime) {
+      if      (step === 50)  l = Math.min(0.99, l + 0.005);
+      else if (step === 100) l = Math.min(0.99, l + 0.010);
+      else if (step === 200) l = Math.min(0.99, l + 0.015);
+      else if (step === 300) l = Math.min(0.99, l + 0.025);
+      else if (step === 400) l = Math.min(0.99, l + 0.035);
+      else if (step === 500) l = Math.min(0.99, l + 0.050);
     }
 
-    // Yellow per-step fine correction (dark end hue shift + additional L adj)
-    if (isYellow && YELLOW_CORRECTION[step]?.lAdj) {
-      l = Math.min(0.99, l + YELLOW_CORRECTION[step].lAdj);
-    }
-
-    // --- HUE ---
+    // hue shift
     let h = baseH + params.hueShift;
-    if (isYellow && YELLOW_CORRECTION[step]?.hShift) {
-      h += YELLOW_CORRECTION[step].hShift;
+    // Yellow: amber/orange 방향으로 shift
+    if (isYellow) {
+      if      (step === 600) h -= 20;
+      else if (step === 700) h -= 35;
+      else if (step === 800) h -= 45;
+      else if (step === 900) h -= 52;
     }
-
+    // Lime: 어두운 쪽 green 방향으로 shift
+    if (isLime) {
+      if      (step === 600) h += 8;
+      else if (step === 700) h += 14;
+      else if (step === 800) h += 18;
+      else if (step === 900) h += 22;
+    }
     // --- CHROMA ---
     let c = base.c * C_CURVE[step] * params.chromaScale;
-    if (isYellow && YELLOW_CORRECTION[step]?.cMult) {
-      c *= YELLOW_CORRECTION[step].cMult;
-    }
     c = Math.max(0, c);
 
     const { hex, r, g, b } = oklchToHex(l, c, h);
     const hsl = hexToHSL(hex);
     scale[step] = {
-      l: +l.toFixed(4),
-      c: +c.toFixed(4),
-      h: +h.toFixed(1),
+      l: +l.toFixed(2),
+      c: +c.toFixed(2),
+      h: +h.toFixed(0),
       hex,
-      oklch: `oklch(${(l*100).toFixed(1)}% ${c.toFixed(4)} ${h.toFixed(1)})`,
+      oklch: `oklch(${(l*100).toFixed(0)}% ${c.toFixed(2)} ${h.toFixed(0)})`,
       hsl: `hsl(${hsl})`,
     };
   });
@@ -1244,7 +1246,9 @@ function renderPalette() {
     const label = document.createElement('div');
     label.className = 'prow-label';
     if (name === 'yellow') {
-      label.innerHTML = `${name} <span class="yellow-info-icon" title="노란색은 인간의 시각 특성상 같은 OKLCH L값에서도 더 밝게 인지됩니다. 팔레트 일관성을 위해 L값을 +0.05 높게 보정합니다.">ⓘ</span>`;
+      label.innerHTML = `${name} <span class="yellow-info-icon" title="노란색은 시각적으로 더 밝게 인지됩니다. 50-500은 L을 +0.05 보정하고, 600-900은 amber 방향으로 hue를 shift해 텍스트 접근성을 확보합니다.">ⓘ</span>`;
+    } else if (name === 'lime') {
+      label.innerHTML = `${name} <span class="yellow-info-icon" title="라임색은 시각적으로 더 밝게 인지됩니다. 50-500은 L을 +0.05 보정하고, 600-900은 green 방향으로 hue를 shift해 텍스트 접근성을 확보합니다.">ⓘ</span>`;
     } else {
       label.textContent = name;
     }
@@ -1339,7 +1343,7 @@ function renderProof() {
 // RENDER — DEMO
 // ====================================================================
 
-const TAG_COLORS = ['blue','sky','purple','pink','red','orange','yellow','lime','green'];
+const TAG_COLORS = ['blue','sky','indigo','violet','purple','pink','red','orange','yellow','lime','green'];
 const ALERT_CFG = [
   { color: 'red',    icon: '✕', title: 'Critical: Node Unreachable',  desc: 'srv-prod-07 failed health check ×3' },
   { color: 'orange', icon: '▲', title: 'Warning: Memory Pressure',    desc: 'Free mem < 512MB on cluster-02' },
@@ -1625,11 +1629,19 @@ function openHuePicker(name, anchorData) {
   overlay.innerHTML = `
     <div class="hue-modal" id="hueModal">
       <div class="hue-modal-title">${name} · Hue 편집</div>
-      <div class="hue-modal-sub">더블클릭한 500 앵커의 Hue를 조정합니다. L과 Chroma는 유지됩니다.</div>
+      <div class="hue-modal-sub">500 앵커의 Hue를 조정합니다. HEX 직접 입력도 가능합니다.</div>
 
       <div class="hue-preview-row">
         <div class="hue-preview-swatch" id="hpSwatch"></div>
-        <div class="hue-preview-info" id="hpInfo"></div>
+        <div style="flex:1;">
+          <div class="hue-preview-info" id="hpInfo"></div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text3);">HEX</span>
+            <input id="hpHexInput" type="text" maxlength="7"
+              style="width:100px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;letter-spacing:0.04em;"
+              placeholder="#000000">
+          </div>
+        </div>
       </div>
 
       <div class="hue-track-wrap">
@@ -1654,18 +1666,18 @@ function openHuePicker(name, anchorData) {
   const swatch = document.getElementById('hpSwatch');
   const info = document.getElementById('hpInfo');
   const warnWrap = document.getElementById('hpWarnWrap');
+  const hexInput = document.getElementById('hpHexInput');
 
   // Set hue track gradient
   track.style.background = buildHueGradient(l, Math.max(c, 0.06));
 
-  function updatePreview(h) {
+  function updatePreview(h, fromHex) {
     const { hex } = oklchToHex(l, c, h);
     swatch.style.background = hex;
     info.innerHTML = `<span style="color:var(--text3)">Hue</span> <b style="color:var(--text)">${Math.round(h)}°</b><br>
-      <span style="color:var(--text3)">HEX</span> <b style="color:var(--text)">${hex.toUpperCase()}</b><br>
       <span style="color:var(--text3)">Default</span> <b style="color:var(--text4)">${defaultH}°</b>`;
+    if (!fromHex) hexInput.value = hex.toUpperCase();
 
-    // Check similarity: compare h directly against all other colors' effective hues
     const myH = h + params.hueShift;
     let minDiff = 999, nearest = '';
     Object.keys(COLORS).forEach(other => {
@@ -1680,13 +1692,30 @@ function openHuePicker(name, anchorData) {
         <div class="hue-similarity-warn">
           <span class="hue-warn-icon">⚠</span>
           <div>
-            <b>'${nearest}'과의 Hue 차이: ${minDiff.toFixed(1)}°</b>
-            색상이 서로 구분되려면 최소 ${MIN_HUE_DIFF}° 이상 차이가 나야 합니다. 현재 너무 가깝습니다.
+            <b>'${nearest}'과의 Hue 차이: ${minDiff.toFixed(0)}°</b>
+            색상이 서로 구분되려면 최소 ${MIN_HUE_DIFF}° 이상 차이가 나야 합니다.
           </div>
         </div>`;
     } else {
       warnWrap.innerHTML = '';
     }
+  }
+
+  // hex → hue 변환 헬퍼
+  function hexToHue(hex) {
+    const r = parseInt(hex.slice(1,3),16)/255;
+    const g = parseInt(hex.slice(3,5),16)/255;
+    const b = parseInt(hex.slice(5,7),16)/255;
+    const lin = v => v <= 0.04045 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+    const rl = lin(r), gl = lin(g), bl = lin(b);
+    const l_ = Math.cbrt(0.4122214708*rl+0.5363325363*gl+0.0514459929*bl);
+    const m_ = Math.cbrt(0.2119034982*rl+0.6806995451*gl+0.1073969566*bl);
+    const s_ = Math.cbrt(0.0883024619*rl+0.2817188376*gl+0.6299787005*bl);
+    const a = 1.9779984951*l_-2.4285922050*m_+0.4505937099*s_;
+    const b2= 0.0259040371*l_+0.7827717662*m_-0.8086757660*s_;
+    let H = Math.atan2(b2, a) * 180 / Math.PI;
+    if (H < 0) H += 360;
+    return Math.round(H);
   }
 
   updatePreview(currentH);
@@ -1695,6 +1724,22 @@ function openHuePicker(name, anchorData) {
     currentH = parseInt(track.value);
     updatePreview(currentH);
   });
+
+  hexInput.addEventListener('input', () => {
+    const val = hexInput.value.trim();
+    const full = val.startsWith('#') ? val : '#' + val;
+    if (/^#[0-9a-fA-F]{6}$/.test(full)) {
+      hexInput.style.borderColor = '';
+      currentH = hexToHue(full);
+      track.value = currentH;
+      swatch.style.background = full;
+      updatePreview(currentH, true);
+    } else {
+      hexInput.style.borderColor = 'rgba(200,80,80,0.6)';
+    }
+  });
+
+  hexInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('hpApply').click(); });
 
   document.getElementById('hpReset').addEventListener('click', () => {
     currentH = defaultH;
@@ -1723,9 +1768,9 @@ function showTip(e, name, step, d) {
   document.getElementById('tipSwatch').style.background = d.hex;
   document.getElementById('tipName').textContent = `${name}-${step}`;
   document.getElementById('tipHex').textContent = d.hex.toUpperCase();
-  document.getElementById('tipOklch').textContent = `${(d.l*100).toFixed(1)}% ${d.c.toFixed(4)} ${d.h.toFixed(1)}°`;
+  document.getElementById('tipOklch').textContent = `${(d.l*100).toFixed(0)}% ${d.c.toFixed(2)} ${d.h.toFixed(0)}°`;
   document.getElementById('tipHsl').textContent = d.hsl;
-  document.getElementById('tipL').textContent = `${(d.l*100).toFixed(2)}% (step target: ${(L_TABLE[currentTheme][step]*100).toFixed(2)}%)`;
+  document.getElementById('tipL').textContent = `${(d.l*100).toFixed(0)}% (step target: ${(L_TABLE[currentTheme][step]*100).toFixed(0)}%)`;
   const bgHex = currentTheme === 'dark' ? '#0e1015' : '#f2f3f5';
   const cr = contrastRatio(d.hex, bgHex);
   const label = cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : cr >= 3 ? 'AA Large' : 'Fail';
@@ -1808,7 +1853,7 @@ function buildTokensJSON(pal) {
         "alpha": 1,
         "hex": hexStr.toUpperCase()
       },
-      "$description": `oklch(${(l*100).toFixed(2)}% ${c.toFixed(4)} ${h.toFixed(1)})`
+      "$description": `oklch(${(l*100).toFixed(0)}% ${c.toFixed(2)} ${h.toFixed(0)})`
     };
   }
 
