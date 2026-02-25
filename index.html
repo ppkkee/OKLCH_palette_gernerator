@@ -482,9 +482,9 @@ input[type="range"]::-webkit-slider-thumb {
 .customizer-bar {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -493,7 +493,7 @@ input[type="range"]::-webkit-slider-thumb {
 .customizer-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .customizer-label {
   font-family: 'IBM Plex Mono', monospace;
@@ -502,29 +502,28 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  min-width: 44px;
+  white-space: nowrap;
 }
-.step-select {
-  display: flex;
-  gap: 2px;
-  background: var(--surface);
+.step-dropdown {
+  padding: 4px 8px;
+  border-radius: 6px;
   border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 3px;
-}
-.step-btn {
-  padding: 3px 7px;
-  border-radius: 5px;
-  border: none;
-  background: transparent;
-  color: var(--text3);
+  background: var(--surface);
+  color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.12s;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  padding-right: 24px;
+  min-width: 64px;
 }
-.step-btn:hover { color: var(--text2); background: var(--surface2); }
-.step-btn.active { background: var(--border); color: var(--text); font-weight: 600; }
+.step-dropdown:focus { border-color: #4a7fd4; }
+.step-dropdown option { background: var(--surface); color: var(--text); }
 .reset-btn {
   padding: 5px 11px;
   border-radius: 6px;
@@ -786,12 +785,12 @@ input[type="range"]::-webkit-slider-thumb {
     <div class="ctrl-wrap">
     <div class="ctrl">
       <span class="ctrl-label">Chroma</span>
-      <input type="range" id="sChroma" min="0.4" max="1.6" step="0.05" value="1.4">
+      <input type="range" id="sChroma" min="0.4" max="2.0" step="0.05" value="1.3">
       <span class="ctrl-val" id="vChroma">1.40</span>
     </div>
     <div class="ctrl">
       <span class="ctrl-label">Hue Shift</span>
-      <input type="range" id="sHue" min="-30" max="30" step="1" value="0">
+      <input type="range" id="sHue" min="-30" max="30" step="1" value="-2">
       <span class="ctrl-val" id="vHue">0°</span>
     </div>
     <div class="ctrl">
@@ -841,17 +840,32 @@ input[type="range"]::-webkit-slider-thumb {
 
     <!-- Token customizer -->
     <div class="customizer-bar" id="customizerBar">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:0.06em;font-weight:600;white-space:nowrap;">SUBTLE</div>
       <div class="customizer-group">
         <span class="customizer-label">BG</span>
-        <div class="step-select" id="bgSteps"></div>
+        <select id="bgSteps" class="step-dropdown" onchange="setTokenStep('bg', parseInt(this.value))"></select>
       </div>
       <div class="customizer-group">
         <span class="customizer-label">Text</span>
-        <div class="step-select" id="textSteps"></div>
+        <select id="textSteps" class="step-dropdown" onchange="setTokenStep('text', parseInt(this.value))"></select>
       </div>
       <div class="customizer-group">
         <span class="customizer-label">Border</span>
-        <div class="step-select" id="borderSteps"></div>
+        <select id="borderSteps" class="step-dropdown" onchange="setTokenStep('border', parseInt(this.value))"></select>
+      </div>
+      <div style="width:1px;background:var(--border);align-self:stretch;margin:0 4px;"></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);letter-spacing:0.06em;font-weight:600;white-space:nowrap;">SOLID</div>
+      <div class="customizer-group">
+        <span class="customizer-label">BG</span>
+        <select id="solidBgSteps" class="step-dropdown" onchange="setSolidStep('bg', parseInt(this.value))"></select>
+      </div>
+      <div class="customizer-group">
+        <span class="customizer-label">Text</span>
+        <select id="solidTextSteps" class="step-dropdown" onchange="setSolidStep('text', parseInt(this.value))"></select>
+      </div>
+      <div class="customizer-group">
+        <span class="customizer-label">Border</span>
+        <select id="solidBorderSteps" class="step-dropdown" onchange="setSolidStep('border', parseInt(this.value))"></select>
       </div>
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
         <span id="contrastBadge" style="font-family:'IBM Plex Mono',monospace;font-size:12px;"></span>
@@ -905,7 +919,7 @@ const L_TABLE = {
     200: 0.900,
     300: 0.820,
     400: 0.700,
-    500: 0.570,
+    500: 0.620,
     600: 0.460,
     700: 0.370,
     800: 0.275,
@@ -920,7 +934,7 @@ const L_TABLE = {
     200: 0.275,
     300: 0.360,
     400: 0.470,
-    500: 0.570,
+    500: 0.620,
     600: 0.680,
     700: 0.790,
     800: 0.890,
@@ -944,37 +958,54 @@ const C_CURVE = {
   900: 0.30,
 };
 
+// Warm 색상 전용 C_CURVE — 색상별/스텝별 개별 최적화
+// red HSL saturation 기준 동일 체감, C_SCALE=1.0 고정 (WARM_C_CURVE에 모두 통합)
+const WARM_C_CURVE = {
+  // 100스텝 앵커(orange=#FFF2EA, yellow=#FFF9EA, lime=#F4FFEA) 기준
+  // k = C_target100 / (C_norm100 × chromaScale), 각 스텝 = k × (C_CURVE[step]/C_CURVE[100])
+  // gamut clamp가 상한 자동 처리하므로 1 초과값도 안전
+  orange: { 50: 0.8500, 100: 0.8500, 200: 0.8500, 300: 0.8500, 400: 0.8500, 500: 0.9900, 600: 2.5673, 700: 2.4150, 800: 2.3753, 900: 2.5878 },
+  yellow: { 50: 0.5700, 100: 1.0700, 200: 1.2000, 300: 0.8500, 400: 0.8500, 500: 3.4000, 600: 7.5909, 700: 6.2107, 800: 4.4855, 900: 2.5878 },
+  lime:   { 50: 0.0500, 100: 0.0850, 200: 0.1530, 300: 0.3570, 400: 2.5116, 500: 7.6827, 600: 12.5049, 700: 10.1314, 800: 8.9816, 900: 7.2029 },
+};
+
 // ---- BASE COLOR DEFINITIONS (500 anchor, cool-muted tone) ----
 // All defined as { h: hue, c: base chroma at 500 }
 const COLORS = {
   'neutral-gray': { h: 267,  c: 0.005 },
   'cool-gray':    { h: 254,  c: 0.016 },
   'slate':        { h: 244,  c: 0.028 },
-  'indigo':       { h: 272,  c: 0.090 },
-  'blue':         { h: 259,  c: 0.125 },
-  'sky':          { h: 230,  c: 0.113 },
-  'violet':       { h: 300,  c: 0.115 },
-  'purple':       { h: 288,  c: 0.105 },
-  'pink':         { h: 1,    c: 0.100 },
-  'red':          { h: 19,   c: 0.130 },
-  'orange':       { h: 62,   c: 0.118 },
-  'yellow':       { h: 98,   c: 0.140 },   // yellow: visual L correction applied in buildScale
-  'lime':         { h: 135,  c: 0.130 },   // lime: same L correction as yellow
-  'green':        { h: 159,  c: 0.105 },
+  'indigo':       { h: 259,  c: 0.069 },
+  'blue':         { h: 259,  c: 0.290 },
+  'sky':          { h: 230,  c: 0.290 },
+  'violet':       { h: 300,  c: 0.290 },
+  'purple':       { h: 288,  c: 0.290 },
+  'pink':         { h: 1,    c: 0.245 },
+  'red':          { h: 19,   c: 0.245 },
+  'orange':       { h: 61,   c: 0.290 },
+  'yellow':       { h: 90,   c: 0.360 },   // yellow: visual L correction applied in buildScale
+  'lime':         { h: 140,  c: 0.290 },   // lime: same L correction as yellow
+  'green':        { h: 159,  c: 0.290 },
 };
 
 // Global user params
 let params = {
-  chromaScale: 1.4,
-  hueShift: 0,
+  chromaScale: 1.3,
+  hueShift: -2,
   lSpread: 1.0,
 };
 let currentTheme = 'dark';
 
 // User-overridden hues per color
 let customHues = {};
+// 500 앵커 직접 hex 오버라이드 (더블클릭 설정값과 별개로 코드 기본값 지정)
+// buildScale에서 step===500일 때 이 값으로 대체됨
+const DEFAULT_ANCHORS = {
+  'red': '#E8192C',  // #FA002A에서 채도 살짝 낮춤 (sRGB 경계 내)
+};
+let customAnchors = { ...DEFAULT_ANCHORS };
 
-const STORAGE_KEY = 'oklch-palette-settings-v1';
+const STORAGE_KEY = 'oklch-palette-settings-v10';
 
 // ====================================================================
 // MATH
@@ -1050,8 +1081,108 @@ function contrastRatio(hex1, hex2) {
 }
 
 // ====================================================================
-// PALETTE GENERATION
+// GAMUT-ADAPTIVE CHROMA NORMALIZATION
 // ====================================================================
+//
+// 공식 (사용자 테마 변경 시 동일하게 적용):
+//
+//   1. 각 hue h의 500 기준 gamut ceiling 탐색:
+//      C_max(h) = max C such that oklch(L_500, C, h) is in sRGB gamut
+//
+//   2. 정규화된 base chroma 계산:
+//      C_norm(h) = C_max(h) × TARGET_GAMUT_RATIO
+//      (TARGET_GAMUT_RATIO = 0.85 → gamut의 85% 사용, 클램핑 방지)
+//
+//   3. 각 스텝의 최종 chroma:
+//      C_final(step) = C_norm(h) × C_CURVE[step] × chromaScale
+//
+//   4. 같은 L 단계 = 같은 C_CURVE[step] 배율 → 모든 색상 동일 공식
+//      같은 색 계열 = 같은 h → C_norm(h) 동일 → 완전히 동일한 계산
+//
+// 결과: hue별 gamut 차이를 보정하여 모든 색상이 동일한 "체감 채도"를 가짐
+
+const TARGET_GAMUT_RATIO = 0.85;
+
+function findGamutCeiling(l, h) {
+  // Binary search: L, h 고정, C를 0~0.5 범위에서 최대 sRGB gamut 내 값 탐색
+  const hr = h * Math.PI / 180;
+  let lo = 0, hi = 0.5, ceiling = 0;
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2;
+    const a_ = mid * Math.cos(hr), b_ = mid * Math.sin(hr);
+    const l_ = l + 0.3963377774*a_ + 0.2158037573*b_;
+    const m_ = l - 0.1055613458*a_ - 0.0638541728*b_;
+    const s_ = l - 0.0894841775*a_ - 1.2914855480*b_;
+    const lc = l_*l_*l_, mc = m_*m_*m_, sc = s_*s_*s_;
+    const R =  4.0767416621*lc - 3.3077115913*mc + 0.2309699292*sc;
+    const G = -1.2684380046*lc + 2.6097574011*mc - 0.3413193965*sc;
+    const B = -0.0041960863*lc - 0.7034186147*mc + 1.7076147010*sc;
+    if (R >= 0 && R <= 1 && G >= 0 && G <= 1 && B >= 0 && B <= 1) {
+      ceiling = mid; lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return ceiling;
+}
+
+// 색상별 정규화된 base chroma 캐시 (rebuild 시 재계산)
+let normalizedChroma = {};
+
+function computeNormalizedChroma() {
+  normalizedChroma = {};
+  const l500 = L_TABLE.light[500];
+  Object.entries(COLORS).forEach(([name, base]) => {
+    const h = (customHues[name] !== undefined ? customHues[name] : base.h) + params.hueShift;
+    // gray 계열은 gamut 정규화 제외 (의도적으로 낮은 채도 유지)
+    if (base.c <= 0.100) {
+      normalizedChroma[name] = base.c;
+    } else {
+      const ceiling = findGamutCeiling(l500, h);
+      normalizedChroma[name] = ceiling * TARGET_GAMUT_RATIO;
+    }
+  });
+}
+
+
+
+// ====================================================================
+// WARM COLOR INDIVIDUAL TUNING (orange / yellow / lime)
+// ====================================================================
+//
+// 문제: orange/yellow/lime은 OKLCH에서 hue 특성상
+//   - 밝은 쪽(50~400): sRGB gamut이 충분히 넓어 선명하게 표현 가능
+//   - 어두운 쪽(600~900): gamut이 급격히 좁아져 탁하고 올리브/갈색으로 변질
+//
+// 해결: 스텝별 L 보정(L_BOOST) + C 배율 개별 조정(C_SCALE_OVERRIDE)
+//
+// 공식 (orange/yellow/lime 전용):
+//   L_final(step) = L_TABLE[step] + L_BOOST[name][step]
+//   C_final(step) = C_norm(h, L_final) × C_CURVE[step] × chromaScale × C_SCALE_OVERRIDE[name][step]
+//
+//   C_norm은 각 스텝의 실제 L로 gamut ceiling 재탐색
+//   → 어두운 스텝일수록 자동으로 낮은 ceiling → 탁함 없이 자연스러운 채도
+//
+// 같은 계열 (orange 끼리, yellow 끼리, lime 끼리) = 동일 테이블 적용 → 동일 공식
+// 같은 L 단계 = 동일 C_CURVE[step] 기반 → 동일 공식
+
+const WARM_L_BOOST = {
+  orange: { 50: 0.010, 100: 0.019, 200: 0.006, 300: 0.010, 400: 0.015, 500: 0.090, 600: -0.004, 700: 0.001, 800: 0.010, 900: 0.015 },
+  yellow: { 50: 0.010, 100: 0.033, 200: 0.050, 300: 0.080, 400: 0.120, 500: 0.190, 600: 0.025, 700: 0.030, 800: 0.030, 900: 0.025 },
+  lime:   { 50: 0.000, 100: 0.000, 200: 0.000, 300: 0.000, 400: 0.022, 500: 0.030, 600: 0.020, 700: 0.015, 800: 0.010, 900: 0.005 },
+};
+
+// C 배율 override: 기본 C_CURVE에 추가로 곱해지는 배율
+// 1.0 = 기본, >1 = 더 선명, <1 = 더 차분
+const WARM_C_SCALE = {
+  // C_SCALE은 1.0 고정 — 모든 조정은 WARM_C_CURVE에 통합
+  orange: { 50: 1.0, 100: 1.0, 200: 1.0, 300: 1.0, 400: 1.0, 500: 1.0, 600: 1.0, 700: 1.0, 800: 1.0, 900: 1.0 },
+  yellow: { 50: 1.0, 100: 1.0, 200: 1.0, 300: 1.0, 400: 1.0, 500: 1.0, 600: 1.0, 700: 1.0, 800: 1.0, 900: 1.0 },
+  lime:   { 50: 1.0, 100: 1.0, 200: 1.0, 300: 1.0, 400: 1.0, 500: 1.0, 600: 1.0, 700: 1.0, 800: 1.0, 900: 1.0 },
+};
+
+const WARM_COLORS = new Set(['orange', 'yellow', 'lime']);
+
 
 let palette = {};
 
@@ -1059,49 +1190,63 @@ function buildScale(name, base, theme) {
   const Ltable = L_TABLE[theme];
   const isYellow = name === 'yellow';
   const isLime   = name === 'lime';
+  const isWarm   = WARM_COLORS.has(name);
   const scale = {};
-  // Use custom hue if user overrode it
   const baseH = (customHues[name] !== undefined) ? customHues[name] : base.h;
 
   STEPS.forEach(step => {
     // --- LIGHTNESS ---
     let l = Ltable[step];
-    // Apply lSpread: amplify the distance from 500's L
+    // lSpread: 500 기준으로 명도 간격 확장/축소
     const l500 = Ltable[500];
     l = l500 + (l - l500) * params.lSpread;
     l = Math.max(0.05, Math.min(0.99, l));
 
-    // Yellow & Lime: 시각적 밝기 보정 — 스텝별 차등 적용
-    if (isYellow || isLime) {
-      if      (step === 50)  l = Math.min(0.99, l + 0.005);
-      else if (step === 100) l = Math.min(0.99, l + 0.010);
-      else if (step === 200) l = Math.min(0.99, l + 0.015);
-      else if (step === 300) l = Math.min(0.99, l + 0.025);
-      else if (step === 400) l = Math.min(0.99, l + 0.035);
-      else if (step === 500) l = Math.min(0.99, l + 0.050);
+    // Warm color L 보정 (orange/yellow/lime 개별 테이블)
+    if (isWarm) {
+      l = Math.min(0.99, l + (WARM_L_BOOST[name][step] || 0));
     }
 
-    // hue shift
+    // --- HUE ---
     let h = baseH + params.hueShift;
-    // Yellow: amber/orange 방향으로 shift
+    // Yellow: 어두운 쪽 amber/orange 방향
     if (isYellow) {
       if      (step === 600) h -= 20;
       else if (step === 700) h -= 35;
       else if (step === 800) h -= 45;
       else if (step === 900) h -= 52;
     }
-    // Lime: 어두운 쪽 green 방향으로 shift
+    // Lime: 어두운 쪽 green 방향
     if (isLime) {
       if      (step === 600) h += 8;
       else if (step === 700) h += 14;
       else if (step === 800) h += 18;
       else if (step === 900) h += 22;
     }
+
     // --- CHROMA ---
-    let c = base.c * C_CURVE[step] * params.chromaScale;
+    // 일반 색상: C_norm(h@L500) × C_CURVE[step] × chromaScale
+    // Warm 색상: C_norm(h@L_step) × C_CURVE[step] × chromaScale × C_SCALE_OVERRIDE[step]
+    //   → 각 스텝의 실제 L로 gamut ceiling 재탐색해 탁함 방지
+    let cNorm;
+    if (isWarm) {
+      // 스텝별 실제 L 기준 gamut ceiling 재탐색
+      cNorm = findGamutCeiling(l, h) * TARGET_GAMUT_RATIO;
+    } else {
+      cNorm = normalizedChroma[name] !== undefined ? normalizedChroma[name] : base.c;
+    }
+    const cOverride = isWarm ? (WARM_C_SCALE[name][step] || 1.0) : 1.0;
+    const cCurveVal = isWarm ? (WARM_C_CURVE[name][step] || C_CURVE[step]) : C_CURVE[step];
+    let c = cNorm * cCurveVal * params.chromaScale * cOverride;
     c = Math.max(0, c);
 
-    const { hex, r, g, b } = oklchToHex(l, c, h);
+    // 500 앵커 오버라이드 (customAnchors)
+    let hex;
+    if (step === 500 && customAnchors[name]) {
+      hex = customAnchors[name].toUpperCase();
+    } else {
+      hex = oklchToHex(l, c, h).hex;
+    }
     const hsl = hexToHSL(hex);
     scale[step] = {
       l: +l.toFixed(2),
@@ -1116,6 +1261,7 @@ function buildScale(name, base, theme) {
 }
 
 function buildPalette() {
+  computeNormalizedChroma(); // hue별 gamut ceiling 기반 chroma 정규화
   palette = {};
   Object.entries(COLORS).forEach(([name, base]) => {
     palette[name] = buildScale(name, base, 'light'); // always light — theme is view-only
@@ -1141,8 +1287,16 @@ let tokenSteps = {
   border: 200,
 };
 
+// Solid variant steps
+let solidSteps = {
+  bg:     500,
+  text:   50,
+  border: 600,
+};
+
 function resetTokenSteps() {
   tokenSteps = { bg: 100, text: 700, border: 200 };
+  solidSteps = { bg: 500, text: 50, border: 600 };
   renderCustomizer();
   renderDemo();
   renderTokenTable();
@@ -1155,20 +1309,46 @@ function setTokenStep(role, step) {
   renderTokenTable();
 }
 
+function setSolidStep(role, step) {
+  solidSteps[role] = step;
+  renderCustomizer();
+  renderDemo();
+  renderTokenTable();
+}
+
 function renderCustomizer() {
+  const isDark = currentTheme === 'dark';
+  // Subtle dropdowns
   ['bg','text','border'].forEach(role => {
-    const container = document.getElementById(role + 'Steps');
-    container.innerHTML = '';
+    const sel = document.getElementById(role + 'Steps');
+    if (!sel) return;
+    sel.innerHTML = '';
     STEPS.forEach(s => {
-      const btn = document.createElement('button');
-      btn.className = 'step-btn' + (tokenSteps[role] === s ? ' active' : '');
-      btn.textContent = s;
-      btn.onclick = () => setTokenStep(role, s);
-      container.appendChild(btn);
+      const opt = document.createElement('option');
+      opt.value = s;
+      // 다크모드에서는 실제 적용되는 스텝(반전값) 표시
+      opt.textContent = isDark ? adaptStep(s) : s;
+      if (tokenSteps[role] === s) opt.selected = true;
+      sel.appendChild(opt);
     });
   });
 
-  // Update contrast badge using blue as reference color
+  // Solid dropdowns
+  ['bg','text','border'].forEach(role => {
+    const id = 'solid' + role.charAt(0).toUpperCase() + role.slice(1) + 'Steps';
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '';
+    STEPS.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = isDark ? adaptStep(s) : s;
+      if (solidSteps[role] === s) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+
+  // Contrast badge
   const s = palette['blue'];
   if (s && s[adaptStep(tokenSteps.bg)] && s[adaptStep(tokenSteps.text)]) {
     const cr = contrastRatio(s[adaptStep(tokenSteps.text)].hex, s[adaptStep(tokenSteps.bg)].hex);
@@ -1200,7 +1380,10 @@ function getTagTokens(colorName, variant) {
     return { bg: bg.hex, text: text.hex, border: bord.hex, dot: s[500].hex };
   }
   if (variant === 'solid') {
-    return { bg: s[500].hex, text: isDark ? s[900].hex : s[50].hex, border: isDark ? s[400].hex : s[600].hex, dot: isDark ? s[900].hex : s[50].hex };
+    const bg   = s[adaptStep(solidSteps.bg)]     || s[500];
+    const text = s[adaptStep(solidSteps.text)]   || s[50];
+    const bord = s[adaptStep(solidSteps.border)] || s[600];
+    return { bg: bg.hex, text: text.hex, border: bord.hex, dot: text.hex };
   }
   if (variant === 'outline') {
     const tc = isDark ? s[400].hex : s[600].hex;
@@ -1469,7 +1652,7 @@ function renderProof() {
 // RENDER — DEMO
 // ====================================================================
 
-const TAG_COLORS = ['blue','sky','indigo','violet','purple','pink','red','orange','yellow','lime','green'];
+const TAG_COLORS = ['neutral-gray','cool-gray','slate','blue','sky','indigo','violet','purple','pink','red','orange','yellow','lime','green'];
 const ALERT_CFG = [
   { color: 'red',    icon: '✕', title: 'Critical: Node Unreachable',  desc: 'srv-prod-07 failed health check ×3' },
   { color: 'orange', icon: '▲', title: 'Warning: Memory Pressure',    desc: 'Free mem < 512MB on cluster-02' },
@@ -1502,16 +1685,57 @@ function renderDemo() {
     return wrap;
   });
 
-  // 2. Tag solid
-  appendCard(container, 'Tag · Solid', () => {
-    const wrap = el('div', 'tag-wrap');
+  // 2b. Solid 묶음 — Tag + Alarm Chip (우측 스택)
+  appendCard(container, 'Solid · Tag + Alarm Chip', () => {
+    const wrap = el('div');
+    wrap.style.cssText = 'display:flex;gap:24px;align-items:flex-start;';
+
+    // Tag column
+    const tagCol = el('div');
+    tagCol.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    const tagLabel = el('div');
+    tagLabel.style.cssText = 'font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--text3);font-weight:600;letter-spacing:0.06em;margin-bottom:2px;';
+    tagLabel.textContent = 'TAG';
+    tagCol.appendChild(tagLabel);
     TAG_COLORS.forEach(c => {
       const t = getTagTokens(c, 'solid');
       if (!t) return;
-      wrap.appendChild(makeTag(t, c));
+      tagCol.appendChild(makeTag(t, c));
     });
+
+    // Alarm chip column
+    const chipCol = el('div');
+    chipCol.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+    const chipLabel = el('div');
+    chipLabel.style.cssText = 'font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--text3);font-weight:600;letter-spacing:0.06em;margin-bottom:2px;';
+    chipLabel.textContent = 'ALARM CHIP';
+    chipCol.appendChild(chipLabel);
+    Object.keys(palette).forEach(name => {
+      const s = palette[name];
+      if (!s) return;
+      const t = getTagTokens(name, 'solid');
+      if (!t) return;
+      const chipBg = currentTheme === 'dark'
+        ? (s[900] ? s[900].hex : '#111111')
+        : (s[50]  ? s[50].hex  : '#FCFCFC');
+      const chip = el('div');
+      chip.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:0 6px;height:22px;border:1px solid ${t.border};border-radius:4px;background:${chipBg};width:fit-content;`;
+      const bar = el('div');
+      bar.style.cssText = `width:4px;height:14px;border-radius:4px;background:${t.bg};flex-shrink:0;`;
+      const txt = el('span');
+      txt.style.cssText = `font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);white-space:nowrap;`;
+      txt.textContent = name;
+      const hex = el('span');
+      hex.style.cssText = `font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-left:4px;`;
+      hex.textContent = t.bg.toUpperCase();
+      chip.appendChild(bar); chip.appendChild(txt); chip.appendChild(hex);
+      chipCol.appendChild(chip);
+    });
+
+    wrap.appendChild(tagCol);
+    wrap.appendChild(chipCol);
     return wrap;
-  });
+  }, 'span2');
 
   // 3. Tag outline
   appendCard(container, 'Tag · Outline', () => {
@@ -1553,25 +1777,27 @@ function renderDemo() {
     return wrap;
   });
 
-  // 6. Server alert customizer note
-  appendCard(container, 'User-Customizable Alert Color', () => {
-    const wrap = el('div');
-    wrap.innerHTML = `<div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6;">
-      사용자가 알람 색상을 변경해도 bg/text/border 토큰이<br>
-      OKLCH L 기준으로 자동 계산됩니다.
-    </div>`;
-    const row = el('div', 'tag-wrap');
-    ['blue','purple','red','orange','green','pink'].forEach(c => {
-      const t = getTagTokens(c, 'subtle');
-      if (!t) return;
-      const a = el('div', 'alert');
-      a.style.cssText = `background:${t.bg};border-color:${t.border};color:${t.text};padding:8px 12px;font-size:12px;`;
-      a.innerHTML = `<span style="color:${t.dot};font-size:12px">●</span> CPU 알람 · <b>${c}</b>`;
-      row.appendChild(a);
-    });
-    wrap.appendChild(row);
-    return wrap;
-  }, 'span2');
+  // 7. (removed standalone alarm chip card)
+}
+
+function makeAlarmChip(color500, label) {
+  const chip = el('div');
+  chip.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:0 6px;height:22px;border:1px solid var(--border);border-radius:4px;background:#FCFCFC;width:fit-content;`;
+  // severity bar
+  const bar = el('div');
+  bar.style.cssText = `width:4px;height:14px;border-radius:4px;background:${color500};flex-shrink:0;`;
+  // label
+  const txt = el('span');
+  txt.style.cssText = `font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);white-space:nowrap;`;
+  txt.textContent = label;
+  // hex badge
+  const hex = el('span');
+  hex.style.cssText = `font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-left:4px;`;
+  hex.textContent = color500.toUpperCase();
+  chip.appendChild(bar);
+  chip.appendChild(txt);
+  chip.appendChild(hex);
+  return chip;
 }
 
 function makeTag(t, label) {
@@ -1736,7 +1962,13 @@ function buildHueGradient(l, c) {
   // Build a full hue sweep at fixed L and C for the track background
   const stops = [];
   for (let h = 0; h <= 360; h += 6) {
-    const { hex } = oklchToHex(l, c, h);
+    // 500 앵커 오버라이드 (customAnchors)
+    let hex;
+    if (step === 500 && customAnchors[name]) {
+      hex = customAnchors[name].toUpperCase();
+    } else {
+      hex = oklchToHex(l, c, h).hex;
+    }
     stops.push(hex);
   }
   return `linear-gradient(to right, ${stops.join(',')})`;
@@ -1798,7 +2030,13 @@ function openHuePicker(name, anchorData) {
   track.style.background = buildHueGradient(l, Math.max(c, 0.06));
 
   function updatePreview(h, fromHex) {
-    const { hex } = oklchToHex(l, c, h);
+    // 500 앵커 오버라이드 (customAnchors)
+    let hex;
+    if (step === 500 && customAnchors[name]) {
+      hex = customAnchors[name].toUpperCase();
+    } else {
+      hex = oklchToHex(l, c, h).hex;
+    }
     swatch.style.background = hex;
     info.innerHTML = `<span style="color:var(--text3)">Hue</span> <b style="color:var(--text)">${Math.round(h)}°</b><br>
       <span style="color:var(--text3)">Default</span> <b style="color:var(--text4)">${defaultH}°</b>`;
@@ -2155,6 +2393,10 @@ function openAddColorModal() {
   const existing = document.getElementById('addColorModal');
   if (existing) existing.remove();
 
+  // cool-gray reference values
+  const GRAY_BASE_C = 0.016;
+  const COLOR_BASE_C = 0.105;
+
   const overlay = document.createElement('div');
   overlay.id = 'addColorModal';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;';
@@ -2162,6 +2404,18 @@ function openAddColorModal() {
   overlay.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:300px;box-shadow:0 16px 48px rgba(0,0,0,0.4);">
       <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--text);margin-bottom:16px;">색상 추가</div>
+
+      <!-- Type selector -->
+      <div style="margin-bottom:14px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-bottom:6px;">타입</div>
+        <div style="display:flex;gap:6px;">
+          <button id="typeColor" style="flex:1;padding:7px;border-radius:7px;border:2px solid #4a7fd4;background:rgba(74,127,212,0.12);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;font-weight:600;">Color</button>
+          <button id="typeGray"  style="flex:1;padding:7px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;">Gray</button>
+        </div>
+        <div id="typeDesc" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-top:5px;">
+          c: ${COLOR_BASE_C} 기준 · HEX로 hue/chroma 자동 추출
+        </div>
+      </div>
 
       <div style="margin-bottom:10px;">
         <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-bottom:5px;">색상 이름</div>
@@ -2190,7 +2444,11 @@ function openAddColorModal() {
   const hexInput = document.getElementById('addColorHex');
   const swatch = document.getElementById('addColorSwatch');
   const info = document.getElementById('addColorInfo');
-  let resolvedH = 220, resolvedC = 0.10;
+  const typeDesc = document.getElementById('typeDesc');
+  let colorType = 'color'; // 'color' | 'gray'
+  let resolvedH = 220;
+  let resolvedC = COLOR_BASE_C;
+  let hexProvided = false;
 
   function hexToOklchLocal(hex) {
     let r = parseInt(hex.slice(1,3),16)/255;
@@ -2209,6 +2467,29 @@ function openAddColorModal() {
     return { h: Math.round(H), c: +C.toFixed(3) };
   }
 
+  function applyType(t) {
+    colorType = t;
+    const btnColor = document.getElementById('typeColor');
+    const btnGray  = document.getElementById('typeGray');
+    if (t === 'color') {
+      btnColor.style.cssText = 'flex:1;padding:7px;border-radius:7px;border:2px solid #4a7fd4;background:rgba(74,127,212,0.12);color:var(--text);font-family:\'IBM Plex Mono\',monospace;font-size:12px;cursor:pointer;font-weight:600;';
+      btnGray.style.cssText  = 'flex:1;padding:7px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:\'IBM Plex Mono\',monospace;font-size:12px;cursor:pointer;';
+      typeDesc.textContent = `c: ${COLOR_BASE_C} 기준 · HEX로 hue/chroma 자동 추출`;
+      if (!hexProvided) resolvedC = COLOR_BASE_C;
+    } else {
+      btnGray.style.cssText  = 'flex:1;padding:7px;border-radius:7px;border:2px solid #4a7fd4;background:rgba(74,127,212,0.12);color:var(--text);font-family:\'IBM Plex Mono\',monospace;font-size:12px;cursor:pointer;font-weight:600;';
+      btnColor.style.cssText = 'flex:1;padding:7px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:\'IBM Plex Mono\',monospace;font-size:12px;cursor:pointer;';
+      typeDesc.textContent = `c: ${GRAY_BASE_C} 고정 (cool-gray 기준) · HEX로 hue만 추출`;
+      if (!hexProvided) resolvedC = GRAY_BASE_C;
+      else resolvedC = GRAY_BASE_C; // gray always uses fixed chroma
+    }
+    if (hexProvided) updateInfo();
+  }
+
+  function updateInfo() {
+    info.textContent = `→ oklch(57% ${resolvedC} ${resolvedH}°)`;
+  }
+
   hexInput.addEventListener('input', () => {
     const val = hexInput.value.trim();
     const full = val.startsWith('#') ? val : '#' + val;
@@ -2216,14 +2497,20 @@ function openAddColorModal() {
       hexInput.style.borderColor = '';
       swatch.style.background = full;
       const { h, c } = hexToOklchLocal(full);
-      resolvedH = h; resolvedC = c;
-      info.textContent = `→ oklch(57% ${c} ${h}°)`;
+      resolvedH = h;
+      // gray: fix chroma to gray base; color: use extracted chroma
+      resolvedC = colorType === 'gray' ? GRAY_BASE_C : c;
+      hexProvided = true;
+      updateInfo();
     } else {
       hexInput.style.borderColor = 'rgba(200,80,80,0.5)';
       info.textContent = '';
+      hexProvided = false;
     }
   });
 
+  document.getElementById('typeColor').addEventListener('click', () => applyType('color'));
+  document.getElementById('typeGray').addEventListener('click',  () => applyType('gray'));
   document.getElementById('addCancelBtn').addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
@@ -2250,7 +2537,7 @@ function saveSettings() {
     currentTheme,
     customHues,
     tokenSteps,
-    colorsHue: Object.fromEntries(Object.entries(COLORS).map(([k,v]) => [k, v.h])),
+    solidSteps,
     colorsFull: JSON.parse(JSON.stringify(COLORS)),
     tagColors: [...TAG_COLORS],
   };
@@ -2275,8 +2562,9 @@ function saveSettings() {
 
 function resetSettings() {
   try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  customAnchors = { ...DEFAULT_ANCHORS };
   // Reset all state to defaults
-  params = { chromaScale: 1.4, hueShift: 0, lSpread: 1.0 };
+  params = { chromaScale: 1.3, hueShift: -2, lSpread: 1.0 };
   customHues = {};
   tokenSteps = { bg: 100, text: 700, border: 200 };
   currentTheme = 'dark';
@@ -2297,7 +2585,9 @@ function loadSettings() {
     const state = JSON.parse(raw);
     if (state.params) Object.assign(params, state.params);
     if (state.customHues) customHues = state.customHues;
+    if (state.customAnchors) customAnchors = { ...DEFAULT_ANCHORS, ...state.customAnchors };
     if (state.tokenSteps) Object.assign(tokenSteps, state.tokenSteps);
+    if (state.solidSteps) Object.assign(solidSteps, state.solidSteps);
     // Restore full COLORS (user-added colors + renames)
     if (state.colorsFull) {
       Object.keys(COLORS).forEach(k => delete COLORS[k]);
